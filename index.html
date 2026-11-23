@@ -494,7 +494,7 @@
         lastDamageAt: -100,
         migrationClock: 24,
         bossClock: 0,
-        bossAt: 150,
+        bossAt: 210,
         bossCount: 0,
         bossRank: 0,
         bossSeen: [],
@@ -1035,17 +1035,6 @@
           key: "field",
           f: () => (S.mag += 1.5),
         },
-        { n: "Anclaje", d: "La masa acelera y frena con más fuerza", i: "anchor", r: 1, f: () => (S.k *= 1.22) },
-        {
-          n: "Segundo aliento",
-          d: "Cura 25 y mejora tu vida máxima",
-          i: "breath",
-          r: 1,
-          f: () => {
-            P.mhp += 15;
-            P.hp = Math.min(P.mhp, P.hp + 25);
-          },
-        },
         { n: "Depredador", d: "Más curación al encadenar bajas", i: "predator", r: 2, f: () => (S.vamp += 0.45) },
         {
           n: "Péndulo de retorno",
@@ -1106,17 +1095,6 @@
           fresh: true,
           f: () => S.execute++,
           ok: () => S.execute < 3,
-        },
-        {
-          n: "Reactor de reposo",
-          d: "Quieto y tras 2 s sin daño: +0,05 vida/s por nivel · máx. 5",
-          i: "breath",
-          r: 1,
-          key: "stillRegen",
-          fresh: true,
-          max: 5,
-          f: () => S.stillRegen++,
-          ok: () => S.stillRegen < 5,
         },
         {
           n: "Masa en caída",
@@ -1207,17 +1185,6 @@
           ok: () => S.xpHeal < 3,
         },
         {
-          n: "Descarga crítica",
-          d: "Cada crítico reduce 0,08 s el dash por nivel · máx. 3",
-          i: "crit",
-          r: 1,
-          key: "critDash",
-          fresh: true,
-          max: 3,
-          f: () => S.critDash++,
-          ok: () => S.critDash < 3,
-        },
-        {
           n: "Arco resonante",
           d: "Los saltos eléctricos hacen 16% más daño por nivel · requiere Cadena de rayos · máx. 3",
           i: "tesla",
@@ -1238,17 +1205,6 @@
           max: 3,
           f: () => S.dodge++,
           ok: () => S.dodge < 3,
-        },
-        {
-          n: "Carga cinética",
-          d: "+3% de crítico si la masa supera 700 de velocidad · máx. 3",
-          i: "boost",
-          r: 1,
-          key: "movingCrit",
-          fresh: true,
-          max: 3,
-          f: () => S.movingCrit++,
-          ok: () => S.movingCrit < 3,
         },
         {
           n: "Eco de retorno",
@@ -1326,6 +1282,72 @@
           max: 3,
           f: () => S.orbitBurst++,
           ok: () => S.orbitBurst < 3,
+        },
+        {
+          n: "Dash fantasma",
+          d: "+0,1 s de invulnerabilidad al hacer dash por nivel · máx. 3",
+          i: "dash",
+          r: 1,
+          key: "ghostDash",
+          fresh: true,
+          max: 3,
+          f: () => S.ghostDash++,
+          ok: () => S.ghostDash < 3,
+        },
+        {
+          n: "Doble dash",
+          d: "Puedes encadenar un segundo dash durante el enfriamiento",
+          i: "boost",
+          r: 2,
+          key: "doubleDash",
+          fresh: true,
+          max: 1,
+          f: () => (S.doubleDash = 1),
+          ok: () => !S.doubleDash,
+        },
+        {
+          n: "Pulso protector",
+          d: "Al lanzar tu pulso ganas un escudo y 1,4 s de invulnerabilidad",
+          i: "pulse",
+          r: 2,
+          key: "ultGuard",
+          fresh: true,
+          max: 1,
+          f: () => (S.ultGuard = 1),
+          ok: () => !S.ultGuard,
+        },
+        {
+          n: "Cazador de élites",
+          d: "+20% de daño a jefes y enemigos pesados por nivel · máx. 3",
+          i: "predator",
+          r: 1,
+          key: "bossDmg",
+          fresh: true,
+          max: 3,
+          f: () => S.bossDmg++,
+          ok: () => S.bossDmg < 3,
+        },
+        {
+          n: "Golpe de apertura",
+          d: "+25% de daño por nivel al primer impacto sobre un enemigo ileso · máx. 3",
+          i: "mark",
+          r: 1,
+          key: "opener",
+          fresh: true,
+          max: 3,
+          f: () => S.opener++,
+          ok: () => S.opener < 3,
+        },
+        {
+          n: "Veterano",
+          d: "+1,2% de daño por sala alcanzada y nivel (hasta la sala 30) · máx. 3",
+          i: "chain",
+          r: 1,
+          key: "veteran",
+          fresh: true,
+          max: 3,
+          f: () => S.veteran++,
+          ok: () => S.veteran < 3,
         },
       ];
       function addW() {
@@ -1437,6 +1459,12 @@
           glass: 0,
           impactCount: 0,
           orbitBurst: 0,
+          ghostDash: 0,
+          doubleDash: 0,
+          ultGuard: 0,
+          bossDmg: 0,
+          opener: 0,
+          veteran: 0,
         };
         Wt = [];
         addW();
@@ -1500,7 +1528,7 @@
           lastDamageAt: -100,
           migrationClock: 24,
           bossClock: 0,
-          bossAt: 150,
+          bossAt: 210,
           bossCount: 0,
           bossRank: 0,
           bossSeen: [],
@@ -3395,12 +3423,141 @@
         while (index < weights.length - 1 && roll >= weights[index]) roll -= weights[index++];
         return pool[index] || "boss_warden";
       }
+      const RANGED_TYPES = new Set(["shooter","sniper","mortar","summoner","trapper","conductor","hexer","drone","ricochet","lancer","bomber","pulsar","prism","lattice","striker","magnetar","echo","coordinator","stalker"]);
+      function bossAlive() {
+        return enemies.some((e) => isBossType(e.t) && !e.dead);
+      }
+      function rangedCap() {
+        const pc = director.pace || {},
+          base = clamp(1 + Math.floor(room / 2) + (pc.diff > 1.3 ? 1 : 0), 2, 9);
+        if (pc.mercy > 0) return 1;
+        if (bossAlive()) return Math.min(base, 2);
+        return pc.phase === "release" ? Math.min(base, 3) : base;
+      }
+
+      /* ============================================================
+         RITMO DEL DIRECTOR: oleadas (build -> pico -> respiro),
+         dificultad adaptativa y ayuda cuando el jugador se ahoga
+         ============================================================ */
+      function newPace() {
+        return {
+          phase: "build", t: 0, len: 45, cycle: 0,
+          skill: 0.3, diff: 1, stress: 0, stressT: 0,
+          hpPrev: null, dmgEMA: 0, reliefCD: 0, reliefs: 0, mercy: 0,
+          roomShift: 0, bossDelay: 0, mult: 1, capMult: 1, packBonus: 0,
+        };
+      }
+      function paceOf() {
+        return director.pace || (director.pace = newPace());
+      }
+      function setPhase(pc, phase, len) {
+        pc.phase = phase;
+        pc.t = 0;
+        pc.len = len;
+        if (phase === "peak") {
+          director.spawnClock = Math.min(director.spawnClock, 0.5);
+          directorLog("RITMO", "Oleada · la presión sube unos segundos");
+          notifyUI("OLEADA", "normal", "pace-peak-" + pc.cycle);
+        } else if (phase === "release") {
+          directorLog("RITMO", "Respiro · el Director afloja la presión");
+          notifyUI("RESPIRO", "normal", "pace-release-" + pc.cycle + "-" + pc.reliefs);
+        } else if (pc.cycle > 0) directorLog("RITMO", "Nueva fase de tensión creciente");
+      }
+      function paceRelief(pc, hpR) {
+        pc.reliefCD = 24;
+        pc.stressT = 0;
+        pc.reliefs++;
+        pc.mercy = 22;
+        pc.diff = Math.max(0.7, pc.diff - 0.15);
+        pc.skill = Math.max(0, pc.skill - 0.12);
+        setPhase(pc, "release", 20);
+        for (let i = bullets.length - 1; i >= 0; i--) {
+          const b = bullets[i];
+          if (Math.hypot(b.x - P.x, b.y - P.y) < 200) {
+            spark(b.x, b.y, b.c || "#e5b5ff", 3);
+            bullets.splice(i, 1);
+          }
+        }
+        for (const e of enemies) {
+          if (e.dead || isBossType(e.t)) continue;
+          const dx = e.x - P.x, dy = e.y - P.y, d = Math.hypot(dx, dy) || 1;
+          if (d < 170) {
+            const push = (170 - d) * 0.5 + 25;
+            e.x = clamp(e.x + (dx / d) * push, 20, MW - 20);
+            e.y = clamp(e.y + (dy / d) * push, 20, MH - 20);
+          }
+        }
+        rings.push({ x: P.x, y: P.y, r: 10, l: 0.5, c: "#83ffd0", g: 190 });
+        spark(P.x, P.y, "#83ffd0", 18);
+        if (hpR < 0.35) P.inv = Math.max(P.inv || 0, 1.8);
+        let chestMsg = "";
+        if (hpR < 0.5 && !chests.some((c) => !c.opened)) {
+          const target = directorSupplyTarget();
+          if (target && spawnDirectorChest(target)) chestMsg = " · cofre de ayuda";
+        }
+        directorLog("AYUDA", "Estás saturado (vida " + Math.round(hpR * 100) + "%) · onda de repulsión, menos presión" + chestMsg);
+        notifyUI("EL DIRECTOR TE DA UN RESPIRO", "normal", "pace-relief-" + pc.reliefs);
+        snd(300, 0.25, "sine", 0.07, 1);
+      }
+      function updatePace(dt) {
+        const pc = paceOf();
+        if (serverCoop?.enabled || !P || P.dead) {
+          pc.mult = 1; pc.capMult = 1; pc.packBonus = 0; pc.bossDelay = 0; pc.roomShift = 0;
+          return;
+        }
+        const hpR = P.hp / Math.max(1, P.mhp);
+        if (pc.hpPrev != null && P.hp < pc.hpPrev) pc.dmgEMA += (pc.hpPrev - P.hp) / Math.max(1, P.mhp);
+        pc.hpPrev = P.hp;
+        pc.dmgEMA *= Math.exp(-dt / 6);
+        let near = 0, nearB = 0;
+        for (const e of enemies) if (!e.dead && !(e.w > 0) && Math.hypot(e.x - P.x, e.y - P.y) < 230) near++;
+        for (const b of bullets) if (Math.hypot(b.x - P.x, b.y - P.y) < 170) nearB++;
+        const stress = clamp(
+          (1 - hpR) * 0.5 + Math.min(1, pc.dmgEMA / 0.35) * 0.32 + Math.min(1, near / 9) * 0.1 + Math.min(1, nearB / 10) * 0.08,
+          0, 1,
+        );
+        pc.stress += (stress - pc.stress) * Math.min(1, dt * 2.2);
+        pc.mercy = Math.max(0, pc.mercy - dt);
+        pc.reliefCD -= dt;
+        // habilidad percibida -> dificultad objetivo
+        const skillTarget = clamp(
+          0.15 + director.comfort * 0.3 + director.dominance * 0.35 + clamp(director.killsPerMinute / 14, 0, 1) * 0.2 + (hpR - 0.5) * 0.2 - pc.stress * 0.4,
+          0, 1,
+        );
+        pc.skill += (skillTarget - pc.skill) * Math.min(1, dt * 0.15);
+        const diffTarget = 0.8 + pc.skill * 0.9 - (pc.mercy > 0 ? 0.2 : 0);
+        pc.diff += (diffTarget - pc.diff) * Math.min(1, dt * 0.2);
+        pc.roomShift = clamp(Math.round((pc.diff - 1) * 2.2), -1, 2);
+        pc.bossDelay = clamp((0.5 - pc.skill) * 50, -20, 25);
+        // detección de ahogo
+        if (pc.stress > 0.6) pc.stressT += dt;
+        else pc.stressT = Math.max(0, pc.stressT - dt * 1.5);
+        if (pc.stressT > (hpR < 0.4 ? 1 : 2.2) && pc.reliefCD <= 0 && runTime > 20) paceRelief(pc, hpR);
+        // ciclo de oleadas
+        pc.t += dt;
+        if (pc.t >= pc.len) {
+          if (pc.phase === "build") {
+            if (pc.mercy > 0 || pc.stress > 0.5 || bossAlive()) setPhase(pc, "release", R(12, 16));
+            else setPhase(pc, "peak", R(12, 18) + pc.skill * 6);
+          } else if (pc.phase === "peak") setPhase(pc, "release", R(14, 20) - pc.skill * 3);
+          else {
+            pc.cycle++;
+            setPhase(pc, "build", R(26, 38));
+          }
+        }
+        const k = clamp(pc.t / Math.max(1, pc.len), 0, 1),
+          phaseMult = pc.phase === "build" ? 0.85 + 0.35 * k : pc.phase === "peak" ? 1.5 : 0.5,
+          phaseCap = pc.phase === "peak" ? 1.12 : pc.phase === "release" ? 0.75 : 1;
+        pc.mult = phaseMult * clamp(pc.diff, 0.7, 1.7) * (pc.mercy > 0 ? 0.6 : 1);
+        pc.capMult = phaseCap * (pc.mercy > 0 ? 0.8 : 1);
+        pc.packBonus = pc.mercy > 0 || pc.phase === "release" ? -1 : pc.phase === "peak" && pc.diff > 1.1 ? 1 : 0;
+      }
       function directorIntroRamp() {
         return clamp(runTime / 300, 0, 1);
       }
       function directorPackCount() {
         const t = directorIntroRamp();
-        return Math.round(2 + t + rnd() * (1 + t));
+        return clamp(Math.round(2 + t + rnd() * (1 + t)) + (director.pace?.packBonus || 0), 1, 6);
       }
       function directorSpawn() {
         const target = chooseDirectorTarget(),
@@ -3470,6 +3627,16 @@
           }
         }
         pack = pack.filter((k) => TY[k] && TY[k].min <= room);
+        {
+          let ranged = enemies.filter((e) => !e.dead && RANGED_TYPES.has(e.t)).length;
+          const cap = rangedCap();
+          pack = pack.map((k) => {
+            if (!RANGED_TYPES.has(k)) return k;
+            if (ranged >= cap) return rnd() < 0.5 ? "grunt" : "dasher";
+            ranged++;
+            return k;
+          });
+        }
         if (!pack.length) pack = ["grunt"];
         const sector = chooseSpawnSector(pack, target.slot >= 0 ? target.player : null);
         if (!sector) return;
@@ -3652,6 +3819,7 @@
         updateDirectorAdaptation(dt);
         if (serverCoop?.enabled) syncTeamDirectorReadings();
         updateSupplyDirector(dt);
+        updatePace(dt);
         director.evalClock -= dt;
         director.spawnClock -= dt;
         director.eventCooldown -= dt;
@@ -3777,10 +3945,10 @@
           );
           director.pressure = clamp(director.pressure * 0.78 + director.threat * 0.22, 0, 100);
           director.populationCap = Math.min(POP_LIMIT_MAX, POP_LIMIT_BASE + Math.floor(runTime / 42) * 4);
-          room = 1 + Math.floor(runTime / 42 + Math.max(0, runTime - 300) * (1 / 28 - 1 / 42));
+          room = Math.max(1, 1 + Math.floor(runTime / 42 + Math.max(0, runTime - 300) * (1 / 28 - 1 / 42)) + (director.pace?.roomShift || 0));
           director.damageRecent *= 0.52;
           director.decisions++;
-          if (!director.event && director.eventCooldown <= 0) {
+          if (!director.event && director.eventCooldown <= 0 && !bossAlive()) {
             const choice = chooseDirectorEvent();
             if (choice) beginEvent(choice.type, choice.reason);
             else {
@@ -3789,7 +3957,7 @@
                 directorLog("OBSERVACIÓN", "Sin intervención: población y peligro dentro de rango");
             }
           }
-          if (director.bossClock >= director.bossAt && !enemies.some((e) => isBossType(e.t) && !e.dead)) {
+          if (director.bossClock >= director.bossAt + (director.pace?.bossDelay || 0) && director.pace?.phase !== "peak" && (director.pace?.stress || 0) < 0.5 && !enemies.some((e) => isBossType(e.t) && !e.dead)) {
             const target = chooseDirectorTarget(),
               bossType = chooseDirectorBoss(),
               sector = chooseSpawnSector([bossType], target.slot >= 0 ? target.player : null),
@@ -3831,8 +3999,10 @@
           director.spawnInterval = 8.2 + (matureInterval - 8.2) * directorIntroRamp();
         }
         if (director.spawnClock <= 0) {
-          if (director.activePopulation < director.populationCap) directorSpawn();
-          director.spawnClock = director.spawnInterval * R(0.82, 1.18);
+          const boss = bossAlive();
+          const pc = director.pace || {};
+          if (director.activePopulation < director.populationCap * (boss ? 0.6 : 1) * (pc.capMult || 1)) directorSpawn();
+          director.spawnClock = (director.spawnInterval * R(0.82, 1.18) * (boss ? 1.8 : 1)) / Math.max(0.3, pc.mult || 1);
         }
       }
       function spark(x, y, c, n, dx, dy) {
@@ -3920,6 +4090,9 @@
           } else e.markT = 1.7;
         }
         if (mass && S.execute && e.hp / Math.max(1, e.mhp) < 0.28) d *= 1 + 0.35 * S.execute;
+        if (mass && S.opener && e.hp >= e.mhp * 0.98) d *= 1 + 0.25 * S.opener;
+        if (S.bossDmg && (isBossType(e.t) || (TY[e.t] && TY[e.t].s >= 4))) d *= 1 + 0.2 * S.bossDmg;
+        if (S.veteran) d *= 1 + 0.012 * S.veteran * Math.min(30, Math.max(0, room - 1));
         e.hpBar = e.hpBar ?? e.hp;
         e.hp -= d;
         runStats.dealt += d;
@@ -4060,6 +4233,16 @@
         if (S.vamp) owner.hp = Math.min(owner.mhp, owner.hp + S.vamp * 0.4);
         if (S.dashkill && owner.dash !== undefined) owner.dash = Math.max(0, owner.dash - 0.18 * S.dashkill);
         spark(e.x, e.y, T.c, isBossType(e.t) ? 60 : 14);
+        if (parts.length < 1050)
+          for (let i = 0, nb = isBossType(e.t) ? 18 : 7; i < nb; i++) {
+            const a = rnd() * 6.283,
+              sp = rnd() * 260 + 60;
+            parts.push({
+              x: e.x, y: e.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+              l: 0.55 + rnd() * 0.5, m: 1, ang: a, blob: 1, z: 2 + rnd() * 3.2,
+              c: th(["#c8372d", "#e8b13a", "#a24a2a"][i % 3], T.c),
+            });
+          }
         shk += isBossType(e.t) ? 18 : 3;
         hs = Math.max(hs, 0.03);
         rings.push({ x: e.x, y: e.y, r: e.r, l: 0.3, c: T.c, g: 260 });
@@ -4642,7 +4825,8 @@
         }
       }
       function dash() {
-        if (st != "play" || P.dash > 0) return;
+        const extraDash = P.dash > 0 && S.doubleDash && P.dashExtra > 0 && !(P.dt > 0);
+        if (st != "play" || (P.dash > 0 && !extraDash)) return;
         let [x, y] = inp();
         if (!x && !y) {
           if (touchAimActive && Math.hypot(touchAim.x, touchAim.y) > 0.08) {
@@ -4661,7 +4845,8 @@
         P.vx = (x / l) * (720 + 70 * S.dashTime) * (S.evoDash ? 1.12 : 1);
         P.vy = (y / l) * (720 + 70 * S.dashTime) * (S.evoDash ? 1.12 : 1);
         P.dt = 0.15 + 0.035 * S.dashTime;
-        P.inv = Math.max(P.inv, 0.3);
+        P.inv = Math.max(P.inv, 0.3 + 0.1 * S.ghostDash);
+        P.dashExtra = extraDash ? 0 : S.doubleDash ? 1 : 0;
         P.dash = P.dcd;
         P.dashStrikeT = S.dashTrail ? 0.22 : 0;
         P.dashHitIds = [];
@@ -4685,6 +4870,10 @@
         P.ult = 0;
         P.ultCd = 2.4;
         P.inv = Math.max(P.inv, 0.8);
+        if (S.ultGuard) {
+          P.shield = 1;
+          P.inv = Math.max(P.inv, 1.4);
+        }
         rings.push(
           { x: P.x, y: P.y, r: 10, l: 0.6, c: "#ffb703", g: 700 },
           { x: P.x, y: P.y, r: 10, l: 0.5, c: "#fff", g: 520 },
@@ -6255,6 +6444,12 @@
         }
       }
       function update(dt) {
+        if (P && !P.dead && P.dt > 0 && st === "play") {
+          const l = ghosts[ghosts.length - 1];
+          if (!l || Math.hypot(l.x - P.x, l.y - P.y) > 14) ghosts.push({ x: P.x, y: P.y, a: Math.atan2(P.vy, P.vx), l: 0.24 });
+        }
+        for (const g of ghosts) g.l -= dt;
+        if (ghosts.length) ghosts = ghosts.filter((g) => g.l > 0);
         for (const p of parts) {
           p.x += p.vx * dt;
           p.y += p.vy * dt;
@@ -7854,7 +8049,54 @@
 /* ============================================================
    ESTILO SALCHICHA: jugador, ojos, suelo y manchas
    ============================================================ */
-      function drawSausage(x, y, ang, white) {
+      const dustSeed = Array.from({ length: 46 }, (_, i) => i);
+      let ghosts = [], vigGrad = null;
+      function drawDust() {
+        if (uiPrefs.reducedMotion || (uiPrefs.particleScale ?? 1) <= 0) return;
+        const t = performance.now() * 0.00004,
+          col = th("255,214,160", "170,210,255");
+        X.globalCompositeOperation = "lighter";
+        for (const i of dustSeed) {
+          const bx = (i * 137.51) % W, by = (i * 89.31) % H,
+            px = ((bx + Math.sin(t * 8 + i) * 30 - cam.x * (0.3 + (i % 4) * 0.08)) % W + W) % W,
+            py = ((by - t * 1400 * (0.3 + (i % 5) * 0.12) - cam.y * (0.3 + (i % 4) * 0.08)) % H + H) % H;
+          X.fillStyle = "rgba(" + col + "," + (0.1 + 0.08 * (i % 4)) + ")";
+          X.beginPath();
+          X.arc(cam.x + px, cam.y + py, 0.8 + (i % 3) * 0.6, 0, 6.283);
+          X.fill();
+        }
+        X.globalCompositeOperation = "source-over";
+      }
+      function drawGhosts() {
+        for (const g of ghosts) {
+          X.globalAlpha = Math.max(0, g.l / 0.24) * 0.38;
+          if (th(true, false)) drawSausage(g.x, g.y, g.a, false, true);
+          else {
+            X.strokeStyle = "#5ef2ff";
+            X.lineWidth = 2;
+            X.beginPath();
+            X.arc(g.x, g.y, 11, 0, 6.283);
+            X.stroke();
+          }
+        }
+        X.globalAlpha = 1;
+      }
+      function drawVignette() {
+        if (!vigGrad) {
+          vigGrad = X.createRadialGradient(W / 2, H / 2, H * 0.46, W / 2, H / 2, H * 1.0);
+          vigGrad.addColorStop(0, "rgba(0,0,0,0)");
+          vigGrad.addColorStop(1, "rgba(8,3,2,.5)");
+        }
+        X.fillStyle = vigGrad;
+        X.fillRect(-20, -20, W + 40, H + 40);
+      }
+      function drawSausage(x, y, ang, white, noShadow) {
+        if (!noShadow) {
+          X.fillStyle = "rgba(0,0,0,.26)";
+          X.beginPath();
+          X.ellipse(x, y + 12, 15, 5.5, 0, 0, 6.283);
+          X.fill();
+        }
         const sp = P ? Math.hypot(P.vx || 0, P.vy || 0) : 0,
           str = 1 + Math.min(0.18, sp * 0.0003);
         X.save();
@@ -9537,7 +9779,12 @@
             ? "none"
             : "default";
         const zz = 1 + zm;
-        X.translate(W / 2 + (Math.random() - 0.5) * shk * shake, H / 2 + (Math.random() - 0.5) * shk * shake);
+        const shkAmp = Math.min(shk, 22) * shake * 0.55,
+          shkT = performance.now() * 0.001;
+        X.translate(
+          W / 2 + (Math.sin(shkT * 53) + Math.sin(shkT * 31 + 1.7)) * 0.5 * shkAmp,
+          H / 2 + (Math.sin(shkT * 47 + 0.6) + Math.sin(shkT * 37 + 2.9)) * 0.5 * shkAmp,
+        );
         X.scale(zz, zz);
         X.translate(-W / 2, -H / 2);
         {
@@ -9614,6 +9861,8 @@
         X.save();
         X.translate(-cam.x, -cam.y);
         drawFloor();
+        drawDust();
+        drawGhosts();
         for (const sec of sectors) {
           const bx = sec.x * SECTOR_W,
             by = sec.y * SECTOR_H;
@@ -9683,38 +9932,6 @@
           }
           const target = onlineEnemyTarget(e),
             a = Math.atan2(target.y - e.y, target.x - e.x);
-          if (e.t === "ricochet" && e.st === 1) {
-            X.strokeStyle = "rgba(85,199,255,.78)";
-            X.lineWidth = 2;
-            X.setLineDash([9, 6]);
-            X.beginPath();
-            X.moveTo(e.x, e.y);
-            X.lineTo(e.aimX, e.aimY);
-            X.stroke();
-            X.setLineDash([]);
-          }
-          if ((e.t === "pulsar" && e.st === 1) || (e.t === "boss_warden" && (e.st === 1 || e.st === 2))) {
-            const gap = e.gapAngle || a,
-              width = e.gapWidth || 0.48,
-              radius = e.r + (e.t === "boss_warden" ? 35 : 22),
-              gaps = e.t === "boss_warden" ? [gap, gap + Math.PI] : [gap];
-            X.strokeStyle = TY[e.t].c;
-            X.lineWidth = e.t === "boss_warden" ? 4 : 2.5;
-            X.globalAlpha = 0.35 + 0.45 * (0.5 + 0.5 * Math.sin(performance.now() * 0.012));
-            for (const g of gaps) {
-              X.beginPath();
-              X.arc(e.x, e.y, radius, g + width, g + 6.283 - width);
-              X.stroke();
-              for (const side of [-1, 1]) {
-                const q = g + side * width;
-                X.beginPath();
-                X.moveTo(e.x + Math.cos(q) * (radius - 12), e.y + Math.sin(q) * (radius - 12));
-                X.lineTo(e.x + Math.cos(q) * (radius + 10), e.y + Math.sin(q) * (radius + 10));
-                X.stroke();
-              }
-            }
-            X.globalAlpha = 1;
-          }
           if (e.t === "magnetar" && e.st === 1) {
             X.strokeStyle = "rgba(164,134,255,.8)";
             X.lineWidth = 2;
@@ -9723,21 +9940,6 @@
             X.arc(e.aimX, e.aimY, 112, 0, 6.283);
             X.stroke();
             X.setLineDash([]);
-          }
-          if ((e.t === "prism" && e.st === 1) || (e.t === "boss_prism" && e.st === 1)) {
-            const ang = e.aim || a,
-              len = e.t === "boss_prism" ? 620 : 430,
-              spread = e.t === "boss_prism" ? 0.2 : 0.2;
-            X.strokeStyle = TY[e.t].c;
-            X.lineWidth = e.t === "boss_prism" ? 2.5 : 1.5;
-            X.globalAlpha = 0.65;
-            for (let q = -1; q <= 1; q++) {
-              X.beginPath();
-              X.moveTo(e.x, e.y);
-              X.lineTo(e.x + Math.cos(ang + q * spread) * len, e.y + Math.sin(ang + q * spread) * len);
-              X.stroke();
-            }
-            X.globalAlpha = 1;
           }
           if ((e.t === "echo" && e.st === 1) || (e.t === "wraith" && e.phased)) {
             const xx = e.aimX,
@@ -9756,80 +9958,6 @@
             X.lineTo(xx, yy + 9);
             X.stroke();
           }
-          if (e.t === "lattice" && e.st === 1) {
-            const ang = e.aim;
-            X.strokeStyle = TY[e.t].c;
-            X.lineWidth = 2;
-            for (const q of [-1, 1]) {
-              X.beginPath();
-              X.moveTo(e.x + Math.cos(ang + q * 0.2) * 20, e.y + Math.sin(ang + q * 0.2) * 20);
-              X.lineTo(e.x + Math.cos(ang + q * 0.2) * 580, e.y + Math.sin(ang + q * 0.2) * 580);
-              X.stroke();
-            }
-          }
-          if ((e.t === "striker" && e.st === 1) || (e.t === "boss_harrier" && e.st === 1)) {
-            X.strokeStyle = TY[e.t].c;
-            X.lineWidth = 2.5;
-            X.setLineDash([9, 6]);
-            X.beginPath();
-            X.moveTo(e.x, e.y);
-            X.lineTo(e.x + e.dx * 520, e.y + e.dy * 520);
-            X.stroke();
-            X.setLineDash([]);
-          }
-          if (e.t === "repulsor" && e.st === 1) {
-            const q = 0.5 + 0.5 * Math.sin(performance.now() * 0.014);
-            X.strokeStyle = TY[e.t].c;
-            X.lineWidth = 2 + q * 2;
-            X.beginPath();
-            X.arc(e.x, e.y, e.r + 12 + q * 18, 0, 6.283);
-            X.stroke();
-          }
-          if (e.t === "dasher" && e.st == 1) {
-            const pulse = 0.5 + 0.5 * Math.sin(performance.now() * 0.025);
-            X.strokeStyle = "rgba(255,183,3," + (0.28 + 0.5 * pulse) + ")";
-            X.lineWidth = 2 + 3 * pulse;
-            X.beginPath();
-            X.moveTo(e.x, e.y);
-            X.lineTo(target.x, target.y);
-            X.stroke();
-            X.beginPath();
-            X.arc(target.x, target.y, 5 + 2 * pulse, 0, 6.283);
-            X.stroke();
-          }
-          if (e.t == "sniper" && e.st === 1) {
-            const pulse = 0.35 + 0.65 * (1 - e.tm / 0.72),
-              reach = 680;
-            X.strokeStyle = "rgba(255,75,190," + (0.16 + 0.58 * pulse) + ")";
-            X.lineWidth = 1.5 + 3 * pulse;
-            X.setLineDash([12, 7]);
-            X.beginPath();
-            X.moveTo(e.x, e.y);
-            X.lineTo(e.x + Math.cos(e.aim) * reach, e.y + Math.sin(e.aim) * reach);
-            X.stroke();
-            X.setLineDash([]);
-            const sx =
-                e.x +
-                Math.cos(e.aim) * Math.min(reach, Math.hypot(P.x - e.x, P.y - e.y) + Math.hypot(P.vx, P.vy) * 0.55),
-              sy =
-                e.y +
-                Math.sin(e.aim) * Math.min(reach, Math.hypot(P.x - e.x, P.y - e.y) + Math.hypot(P.vx, P.vy) * 0.55);
-            X.beginPath();
-            X.arc(sx, sy, 9 + 9 * pulse, 0, 6.283);
-            X.moveTo(sx - 13, sy);
-            X.lineTo(sx + 13, sy);
-            X.moveTo(sx, sy - 13);
-            X.lineTo(sx, sy + 13);
-            X.stroke();
-          }
-          if (e.t == "tank" && e.st === 1) {
-            const pulse = 0.35 + 0.65 * (1 - e.tm / 0.72);
-            X.strokeStyle = "rgba(76,201,240," + (0.14 + 0.42 * pulse) + ")";
-            X.lineWidth = 2 + 2 * pulse;
-            X.beginPath();
-            X.arc(e.x, e.y, e.r + 8 + 44 * pulse, 0, 6.283);
-            X.stroke();
-          }
           if (e.t == "stalker" && e.st === 1) {
             const pulse = 0.4 + 0.6 * (1 - e.tm / 0.55);
             X.strokeStyle = "rgba(215,160,255," + (0.2 + 0.55 * pulse) + ")";
@@ -9846,27 +9974,44 @@
             X.arc(e.aimX, e.aimY, 22 + 14 * pulse, 0, 6.283);
             X.stroke();
           }
-          if ((e.t == "predator" || e.t == "lancer") && e.st === 1) {
-            const pulse = 0.35 + 0.65 * (1 - e.tm / 0.72);
-            X.strokeStyle = "rgba(255,61,129," + (0.25 + 0.6 * pulse) + ")";
-            X.lineWidth = 2 + 4 * pulse;
-            X.beginPath();
-            X.moveTo(e.x, e.y);
-            X.lineTo(e.x + e.dx * 500, e.y + e.dy * 500);
-            X.stroke();
-          }
           drawEnemyBody(e, a);
           drawEnemyHealthBar(e);
         }
         for (const arc of chainArcs) drawChainArc(arc);
+        X.lineCap = "round";
         for (const b of bullets) {
-          X.shadowColor = b.c || "#ff4d9d";
-          X.shadowBlur = 12;
-          X.fillStyle = b.c || "#ffd1e6";
+          const c = b.c || "#ff4d9d";
+          X.globalAlpha = 0.32;
+          X.strokeStyle = c;
+          X.lineWidth = 5;
           X.beginPath();
-          X.arc(b.x, b.y, 4.5, 0, 6.283);
+          X.moveTo(b.x, b.y);
+          X.lineTo(b.x - b.vx * 0.04, b.y - b.vy * 0.04);
+          X.stroke();
+          X.globalAlpha = 1;
+          X.fillStyle = "rgba(8,5,12,.9)";
+          X.beginPath();
+          X.arc(b.x, b.y, 6.4, 0, 6.283);
+          X.fill();
+          X.fillStyle = c;
+          X.beginPath();
+          X.arc(b.x, b.y, 4.4, 0, 6.283);
+          X.fill();
+          X.fillStyle = "rgba(255,255,255,.8)";
+          X.beginPath();
+          X.arc(b.x - 1.2, b.y - 1.2, 1.5, 0, 6.283);
           X.fill();
         }
+        X.globalCompositeOperation = "lighter";
+        X.globalAlpha = 0.2;
+        for (const b of bullets) {
+          X.fillStyle = b.c || "#ff4d9d";
+          X.beginPath();
+          X.arc(b.x, b.y, 11, 0, 6.283);
+          X.fill();
+        }
+        X.globalAlpha = 1;
+        X.globalCompositeOperation = "source-over";
         X.shadowBlur = 0;
         X.globalCompositeOperation = "lighter";
         for (const o of orbs) {
@@ -9895,14 +10040,24 @@
         for (const chest of chests) drawWorldChest(chest);
         for (const r of rings) {
           X.strokeStyle = r.c;
-          X.globalAlpha = Math.max(0, Math.min(1, r.l * 3));
-          X.lineWidth = 2 + r.l * 10;
+          X.globalAlpha = Math.pow(Math.max(0, Math.min(1, r.l * 2.6)), 1.4) * 0.9;
+          X.lineWidth = 1.5 + r.l * 7;
           X.beginPath();
           X.arc(r.x, r.y, r.r, 0, 6.283);
           X.stroke();
           X.globalAlpha = 1;
         }
         for (const p of parts) {
+          X.globalCompositeOperation = p.blob ? "source-over" : "lighter";
+          if (p.blob) {
+            const q2 = Math.max(0, p.l / p.m);
+            X.globalAlpha = Math.min(1, q2 * 1.6);
+            X.fillStyle = p.c;
+            X.beginPath();
+            X.arc(p.x, p.y, p.z * (0.5 + 0.5 * q2), 0, 6.283);
+            X.fill();
+            continue;
+          }
           const q = Math.max(0, p.l / p.m),
             z = (p.z || 2) * (0.35 + q);
           X.globalAlpha = q;
@@ -9921,7 +10076,7 @@
           X.strokeStyle = a.c;
           X.lineWidth = 2 + q * 5;
           X.shadowColor = a.c;
-          X.shadowBlur = 18;
+          X.shadowBlur = 9;
           X.beginPath();
           X.arc(a.x, a.y, 13 + 22 * (1 - q), a.a - 0.8 * a.p, a.a + 0.8 * a.p);
           X.stroke();
@@ -10042,12 +10197,13 @@
           drawAimGuide();
           if (st === "online" || net.p2pHost) drawOnlinePeers();
           X.restore();
+          if (P && ["play", "pause"].includes(st)) drawVignette();
           if ((P && ["play", "pause"].includes(st)) || (P && st == "settings" && settingsFrom == "pause"))
             drawGameHud();
           if (st === "online") drawOnlineHud();
           if (touchCapable && ["play", "online"].includes(st)) drawTouchControls();
           if (uiPrefs.damageNumbers !== false)
-            for (const q of pops) {
+            for (const q of pops.slice(-18)) {
               const life = Math.max(0, q.l / (q.t === "CRÍTICO" ? 0.7 : 0.6)),
                 age = 1 - life,
                 pop = 1 + Math.sin(Math.min(1, age * 3) * Math.PI) * 0.32,
@@ -10068,8 +10224,6 @@
               X.lineWidth = 3;
               X.strokeStyle = "rgba(6,10,20,.86)";
               X.strokeText(q.t, 0, 0);
-              X.shadowColor = q.c;
-              X.shadowBlur = 10 * life;
               X.fillStyle = q.c;
               X.fillText(q.t, 0, 0);
               X.restore();
@@ -10109,7 +10263,10 @@
             X.fillRect(-20, -20, W + 40, H + 40);
           }
           if (flash > 0 && uiPrefs.screenFlash !== false) {
-            X.fillStyle = "rgba(255,40,70," + flash * 0.28 + ")";
+            const fg = X.createRadialGradient(W / 2, H / 2, H * 0.28, W / 2, H / 2, H * 0.92);
+            fg.addColorStop(0, "rgba(255,40,70,0)");
+            fg.addColorStop(1, "rgba(255,40,70," + flash * 0.6 + ")");
+            X.fillStyle = fg;
             X.fillRect(-20, -20, W + 40, H + 40);
           }
           if (
