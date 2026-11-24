@@ -271,6 +271,9 @@
         ACH = th("#ffb042", "#79c8c8");
       }
       applyTheme();
+      function ultGain(owner, amt) {
+        return (amt * (1 + 0.1 * ((S && S.metaUlt) || 0))) / (1 + 0.3 * ((owner && owner.ultUses) || 0));
+      }
       function newRunStats() {
         return { dealt: 0, taken: 0, best: 0, dashes: 0, ults: 0, blocked: 0, byType: {} };
       }
@@ -306,6 +309,8 @@
         return uiNoticeQueue.find((n) => n.key === key) || null;
       }
       function notifyUI(text, type = "normal", key = text) {
+        // El jugador no debe ver el funcionamiento interno del director: se silencian esos avisos (siguen en el registro J).
+        if (/^(director-|event-|pace-|supply-|chest-open-|pilot-pressure-|low-health)/.test(String(key))) return;
         const now = runTime,
           existing = findNotice(key);
         if (existing) {
@@ -916,7 +921,7 @@
           n: "Segunda masa",
           d: "Añade otra masa orbital",
           i: "orbit",
-          r: 2,
+          r: 3,
           f: () => {
             S.n++;
             addW();
@@ -974,7 +979,7 @@
           key: "magnet",
           f: () => S.mag++,
         },
-        { n: "Furia", d: "+40% de daño con poca vida", i: "rage", r: 2, f: () => S.rage++ },
+        { n: "Furia", d: "+40% de daño con poca vida", i: "rage", r: 1, f: () => S.rage++ },
         {
           n: "Rebote brutal",
           d: "Rebotas más fuerte y golpeas más duro",
@@ -987,7 +992,7 @@
           n: "Eco sísmico",
           d: "Cada impacto sacude a los rivales cercanos",
           i: "echo",
-          r: 2,
+          r: 1,
           key: "echo",
           f: () => S.after++,
         },
@@ -1004,7 +1009,7 @@
           n: "Núcleo fracturador",
           d: "+20% de daño crítico",
           i: "crit",
-          r: 2,
+          r: 1,
           key: "critDamage",
           f: () => (S.critDmg += 0.2),
         },
@@ -1018,7 +1023,7 @@
           f: () => S.dashTime++,
         },
         { n: "Chatarrero", d: "Los enemigos dejan más núcleos", i: "scrap", r: 1, f: () => S.harvest++ },
-        { n: "Pulso concentrado", d: "+25% de daño con tu pulso", i: "pulse", r: 2, f: () => (S.ultForce *= 1.25) },
+        { n: "Pulso concentrado", d: "+25% de daño con tu pulso", i: "pulse", r: 1, f: () => (S.ultForce *= 1.25) },
         {
           n: "Descarga Tesla",
           d: "Más saltos y alcance eléctrico",
@@ -1090,7 +1095,7 @@
           n: "Remate de precisión",
           d: "+35% de daño a enemigos por debajo del 28% de vida",
           i: "crit",
-          r: 2,
+          r: 1,
           key: "execute",
           fresh: true,
           f: () => S.execute++,
@@ -1133,7 +1138,7 @@
           n: "Último latido",
           d: "Una vez por run, un golpe letal te deja a 1 de vida y activa escudo",
           i: "heart",
-          r: 2,
+          r: 3,
           key: "lastStand",
           fresh: true,
           max: 1,
@@ -1265,7 +1270,7 @@
           n: "Pacto de cristal",
           d: "+12% de daño, pero recibes 5% más por nivel · máx. 3",
           i: "crit",
-          r: 2,
+          r: 3,
           key: "glass",
           fresh: true,
           max: 3,
@@ -1349,6 +1354,731 @@
           f: () => S.veteran++,
           ok: () => S.veteran < 3,
         },
+        {
+          n: "Reactor de reposo",
+          d: "Quieto y tras 1,2 s sin daño: +0,3 vida/s por nivel · máx. 5",
+          i: "breath",
+          r: 1,
+          key: "stillRegen",
+          fresh: true,
+          max: 5,
+          f: () => S.stillRegen++,
+          ok: () => S.stillRegen < 5,
+        },
+        {
+          n: "Espinas",
+          d: "Los enemigos que te tocan reciben 14 de daño por nivel · máx. 3",
+          i: "shield",
+          r: 1,
+          key: "thorns",
+          fresh: true,
+          max: 3,
+          f: () => S.thorns++,
+          ok: () => S.thorns < 3,
+        },
+        {
+          n: "Sed de pulso",
+          d: "+25% de carga de pulso al eliminar por nivel · máx. 3",
+          i: "pulse",
+          r: 1,
+          key: "ultKill",
+          fresh: true,
+          max: 3,
+          f: () => S.ultKill++,
+          ok: () => S.ultKill < 3,
+        },
+        {
+          n: "Dash cinético",
+          d: "Cada impacto de la masa reduce 0,05 s el dash por nivel · máx. 3",
+          i: "boost",
+          r: 1,
+          key: "dashHit",
+          fresh: true,
+          max: 3,
+          f: () => S.dashHit++,
+          ok: () => S.dashHit < 3,
+        },
+        {
+          n: "Digestión",
+          d: "Al subir de sala recuperas un 6% de vida máxima por nivel · máx. 3",
+          i: "heart",
+          r: 1,
+          key: "digest",
+          fresh: true,
+          max: 3,
+          f: () => S.digest++,
+          ok: () => S.digest < 3,
+        },
+        {
+          n: "Gula",
+          d: "Los núcleos de experiencia valen un 20% más por nivel · máx. 3",
+          i: "scrap",
+          r: 1,
+          key: "gluttony",
+          fresh: true,
+          max: 3,
+          f: () => S.gluttony++,
+          ok: () => S.gluttony < 3,
+        },
+        {
+          n: "Crítico vampírico",
+          d: "Cada crítico te cura 0,4 de vida por nivel · máx. 3",
+          i: "vamp",
+          r: 1,
+          key: "critHeal",
+          fresh: true,
+          max: 3,
+          f: () => S.critHeal++,
+          ok: () => S.critHeal < 3,
+        },
+        {
+          n: "Piel curtida",
+          d: "Reduce 1,5 de daño cada golpe recibido (mínimo 50%) por nivel · máx. 3",
+          i: "shield",
+          r: 1,
+          key: "tough",
+          fresh: true,
+          max: 3,
+          f: () => S.tough++,
+          ok: () => S.tough < 3,
+        },
+        {
+          n: "Venganza",
+          d: "Al recibir daño liberas una onda que hiere a los cercanos (1,5 s de espera) · máx. 3",
+          i: "shock",
+          r: 2,
+          key: "revenge",
+          fresh: true,
+          max: 3,
+          f: () => S.revenge++,
+          ok: () => S.revenge < 3,
+        },
+        {
+          n: "Corpulento",
+          d: "+12% de vida máxima por nivel y cura la diferencia · máx. 3",
+          i: "heart",
+          r: 1,
+          key: "corpulent",
+          fresh: true,
+          max: 3,
+          f: () => {
+            S.corpulent++;
+            const before = P.mhp;
+            P.mhp *= 1.12;
+            P.hp = Math.min(P.mhp, P.hp + (P.mhp - before));
+          },
+          ok: () => S.corpulent < 3,
+        },
+        {
+          n: "Singularidad",
+          d: "Cada 9 s tu masa abre un agujero negro: arrastra enemigos, los daña y explota al cerrarse",
+          i: "hole",
+          r: 4,
+          key: "singularity",
+          max: 1,
+          f: () => (S.singularity = 1),
+          ok: () => !S.singularity,
+        },
+        {
+          n: "Eco fantasma",
+          d: "Cada impacto de masa salta a 2 enemigos cercanos con un 50% de su daño",
+          i: "echo",
+          r: 4,
+          key: "ghostEcho",
+          max: 1,
+          f: () => (S.ghostEcho = 1),
+          ok: () => !S.ghostEcho,
+        },
+        {
+          n: "Marea carmesí",
+          d: "-35% de vida máxima, +55% de daño y cada baja te cura 2,5 de vida",
+          i: "crimson",
+          r: 4,
+          key: "crimsonTide",
+          max: 1,
+          f: () => {
+            S.crimsonTide = 1;
+            S.dmg *= 1.55;
+            P.mhp *= 0.65;
+            P.hp = Math.min(P.hp, P.mhp);
+          },
+          ok: () => !S.crimsonTide,
+        },
+        {
+          n: "Tríada",
+          d: "+2 masas orbitales y +10% de alcance de cadena",
+          i: "triad",
+          r: 5,
+          key: "triad",
+          max: 1,
+          f: () => {
+            S.n += 2;
+            addW();
+            addW();
+            S.L *= 1.1;
+          },
+          ok: () => !S.triad && S.n <= 2,
+        },
+        {
+          n: "Reloj roto",
+          d: "Cada 24 s el tiempo se detiene 3,5 s para los enemigos y tus impactos hacen ×1,8",
+          i: "brokenclock",
+          r: 5,
+          key: "timeBreak",
+          max: 1,
+          f: () => (S.timeBreak = 1),
+          ok: () => !S.timeBreak,
+        },
+        {
+          n: "Trofeo",
+          d: "Eliminar un jefe o enemigo pesado cura un 20% de vida y da 30% de pulso",
+          i: "predator",
+          r: 2,
+          key: "trophy",
+          fresh: true,
+          max: 1,
+          f: () => (S.trophy = 1),
+          ok: () => !S.trophy,
+        },
+        {
+          n: "Escudo explosivo",
+          d: "Cuando tu escudo bloquea un golpe, estalla y daña a los cercanos",
+          i: "shield",
+          r: 2,
+          key: "shieldBlast",
+          fresh: true,
+          max: 1,
+          f: () => (S.shieldBlast = 1),
+          ok: () => !S.shieldBlast,
+        },
+        {
+          n: "Autocuración",
+          d: "+0,35 de vida/s por nivel · máx. 4",
+          i: "heart",
+          r: 0,
+          key: "selfHeal",
+          fresh: true,
+          max: 4,
+          f: () => S.selfHeal++,
+          ok: () => S.selfHeal < 4,
+        },
+        {
+          n: "Fuego intenso",
+          d: "+20% de daño de las quemaduras por nivel · requiere Brasas persistentes · máx. 3",
+          i: "flame",
+          r: 0,
+          key: "hotFire",
+          fresh: true,
+          max: 3,
+          f: () => S.hotFire++,
+          ok: () => S.hotFire < 3 && S.ember > 0,
+        },
+        {
+          n: "Explosiones grandes",
+          d: "+20% de radio de las explosiones por nivel · requiere Explosión · máx. 3",
+          i: "boom",
+          r: 0,
+          key: "bigBoom",
+          fresh: true,
+          max: 3,
+          f: () => S.bigBoom++,
+          ok: () => S.bigBoom < 3 && S.boom > 0,
+        },
+        {
+          n: "Furia final",
+          d: "+35% de daño con el 20% de vida o menos por nivel · máx. 3",
+          i: "rage",
+          r: 0,
+          key: "finalFury",
+          fresh: true,
+          max: 3,
+          f: () => S.finalFury++,
+          ok: () => S.finalFury < 3,
+        },
+        {
+          n: "Gotero",
+          d: "Cada 3 s recuperas un 5% de la vida que te falta por nivel · máx. 3",
+          i: "repair",
+          r: 0,
+          key: "ivDrip",
+          fresh: true,
+          max: 3,
+          f: () => S.ivDrip++,
+          ok: () => S.ivDrip < 3,
+        },
+        {
+          n: "Esquiva curativa",
+          d: "Al esquivar curas 3 de vida por nivel · requiere Reflejos de vacío · máx. 3",
+          i: "heart",
+          r: 0,
+          key: "dodgeHeal",
+          fresh: true,
+          max: 3,
+          f: () => S.dodgeHeal++,
+          ok: () => S.dodgeHeal < 3 && S.dodge > 0,
+        },
+        {
+          n: "Escudo recargable",
+          d: "El escudo vuelve solo tras 25/20/15 s · máx. 3",
+          i: "shield",
+          r: 1,
+          key: "rechShield",
+          fresh: true,
+          max: 3,
+          f: () => S.rechShield++,
+          ok: () => S.rechShield < 3,
+        },
+        {
+          n: "Sierra orbital",
+          d: "+1 sierra que gira a tu alrededor y corta a los enemigos · máx. 4",
+          i: "orbit",
+          r: 1,
+          key: "saw",
+          fresh: true,
+          max: 4,
+          f: () => S.saw++,
+          ok: () => S.saw < 4,
+        },
+        {
+          n: "Contraataque",
+          d: "Al esquivar dañas a los cercanos (16 por nivel) · requiere Reflejos de vacío · máx. 3",
+          i: "shock",
+          r: 1,
+          key: "counter",
+          fresh: true,
+          max: 3,
+          f: () => S.counter++,
+          ok: () => S.counter < 3 && S.dodge > 0,
+        },
+        {
+          n: "Recuperación",
+          d: "Si pasas 6 s sin eliminar, recuperas 5 de vida por nivel · máx. 3",
+          i: "breath",
+          r: 1,
+          key: "recuperate",
+          fresh: true,
+          max: 3,
+          f: () => S.recuperate++,
+          ok: () => S.recuperate < 3,
+        },
+        {
+          n: "Daño en área",
+          d: "Los impactos tienen 14%/18%/22% de salpicar a los cercanos · máx. 3",
+          i: "boom",
+          r: 1,
+          key: "splash",
+          fresh: true,
+          max: 3,
+          f: () => S.splash++,
+          ok: () => S.splash < 3,
+        },
+        {
+          n: "Impactos venenosos",
+          d: "Los impactos pueden envenenar 4 s al enemigo · máx. 3",
+          i: "ice",
+          r: 1,
+          key: "poison",
+          fresh: true,
+          max: 3,
+          f: () => S.poison++,
+          ok: () => S.poison < 3,
+        },
+        {
+          n: "Metralla de núcleos",
+          d: "Recoger experiencia hiere a los enemigos a 100 de ti · máx. 3",
+          i: "scrap",
+          r: 1,
+          key: "shrapnel",
+          fresh: true,
+          max: 3,
+          f: () => S.shrapnel++,
+          ok: () => S.shrapnel < 3,
+        },
+        {
+          n: "Plantar pies",
+          d: "+25% de daño por nivel mientras estás quieto · máx. 3",
+          i: "anchor",
+          r: 1,
+          key: "digIn",
+          fresh: true,
+          max: 3,
+          f: () => S.digIn++,
+          ok: () => S.digIn < 3,
+        },
+        {
+          n: "Perfeccionista",
+          d: "+20% de daño por nivel con la vida completa · máx. 3",
+          i: "crit",
+          r: 1,
+          key: "perfectionist",
+          fresh: true,
+          max: 3,
+          f: () => S.perfectionist++,
+          ok: () => S.perfectionist < 3,
+        },
+        {
+          n: "Puñalada trapera",
+          d: "+40% de daño por nivel al golpear a un enemigo por la espalda · máx. 3",
+          i: "mark",
+          r: 1,
+          key: "backstab",
+          fresh: true,
+          max: 3,
+          f: () => S.backstab++,
+          ok: () => S.backstab < 3,
+        },
+        {
+          n: "Fijar objetivo",
+          d: "+6% de daño por impacto seguido al mismo enemigo (hasta 5) por nivel · máx. 3",
+          i: "frenzy",
+          r: 1,
+          key: "focus",
+          fresh: true,
+          max: 3,
+          f: () => S.focus++,
+          ok: () => S.focus < 3,
+        },
+        {
+          n: "Dolor acumulado",
+          d: "Tras recibir daño, +30% de daño por nivel durante 4 s · máx. 3",
+          i: "rage",
+          r: 1,
+          key: "pain",
+          fresh: true,
+          max: 3,
+          f: () => S.pain++,
+          ok: () => S.pain < 3,
+        },
+        {
+          n: "Postura de hierro",
+          d: "Recibes un 10% menos de daño por nivel mientras estás quieto · máx. 3",
+          i: "shield",
+          r: 1,
+          key: "ironStance",
+          fresh: true,
+          max: 3,
+          f: () => S.ironStance++,
+          ok: () => S.ironStance < 3,
+        },
+        {
+          n: "Forma óptima",
+          d: "Recibes un 15% menos de daño por nivel con la vida completa · máx. 3",
+          i: "shield",
+          r: 1,
+          key: "topForm",
+          fresh: true,
+          max: 3,
+          f: () => S.topForm++,
+          ok: () => S.topForm < 3,
+        },
+        {
+          n: "Escudo curativo",
+          d: "Cuando se rompe tu escudo, curas 10 de vida por nivel · máx. 3",
+          i: "heart",
+          r: 1,
+          key: "shieldHeal",
+          fresh: true,
+          max: 3,
+          f: () => S.shieldHeal++,
+          ok: () => S.shieldHeal < 3,
+        },
+        {
+          n: "Recuperación diferida",
+          d: "Recuperas parte del daño recibido 5 s después (25%/40%/55%) · máx. 3",
+          i: "breath",
+          r: 1,
+          key: "delayed",
+          fresh: true,
+          max: 3,
+          f: () => S.delayed++,
+          ok: () => S.delayed < 3,
+        },
+        {
+          n: "Periodo de recuperación",
+          d: "+0,25 s de invulnerabilidad tras recibir daño por nivel · máx. 3",
+          i: "shield",
+          r: 1,
+          key: "recPeriod",
+          fresh: true,
+          max: 3,
+          f: () => S.recPeriod++,
+          ok: () => S.recPeriod < 3,
+        },
+        {
+          n: "Sangre resbaladiza",
+          d: "Hasta +12% de esquiva por nivel cuanta menos vida tengas · máx. 2",
+          i: "speed",
+          r: 1,
+          key: "slippery",
+          fresh: true,
+          max: 2,
+          f: () => S.slippery++,
+          ok: () => S.slippery < 2,
+        },
+        {
+          n: "Pausa curativa",
+          d: "Quieto 2 s curas un 10% de tu vida por nivel (espera de 60/50/40 s) · máx. 3",
+          i: "repair",
+          r: 1,
+          key: "pauseHeal",
+          fresh: true,
+          max: 3,
+          f: () => S.pauseHeal++,
+          ok: () => S.pauseHeal < 3,
+        },
+        {
+          n: "Calentamiento",
+          d: "+1,2% de velocidad cada pocos segundos (hasta 20 veces); se pierde al recibir daño · máx. 3",
+          i: "speed",
+          r: 1,
+          key: "warm",
+          fresh: true,
+          max: 3,
+          f: () => S.warm++,
+          ok: () => S.warm < 3,
+        },
+        {
+          n: "Gran cerebro",
+          d: "+12% de experiencia por nivel, pero te mueves un 4% más lento · máx. 3",
+          i: "magnet",
+          r: 1,
+          key: "bigBrain",
+          fresh: true,
+          max: 3,
+          f: () => { S.bigBrain++; P.spd *= 0.96; },
+          ok: () => S.bigBrain < 3,
+        },
+        {
+          n: "Ágil y frágil",
+          d: "+10% de velocidad y -12% de vida máxima por nivel · máx. 2",
+          i: "speed",
+          r: 1,
+          key: "smallFry",
+          fresh: true,
+          max: 2,
+          f: () => { S.smallFry++; P.spd *= 1.1; P.mhp *= 0.88; P.hp = Math.min(P.hp, P.mhp); },
+          ok: () => S.smallFry < 2,
+        },
+        {
+          n: "Maza pesada",
+          d: "+20% de daño por impacto, pero la cadena responde un 10% más lenta · máx. 2",
+          i: "mass",
+          r: 1,
+          key: "heavy",
+          fresh: true,
+          max: 2,
+          f: () => { S.heavy++; S.dmg *= 1.2; S.k *= 0.9; },
+          ok: () => S.heavy < 2,
+        },
+        {
+          n: "Minas de dash",
+          d: "Cada dash suelta una mina (hasta 4/6/8) que estalla al contacto · máx. 3",
+          i: "dash",
+          r: 2,
+          key: "mines",
+          fresh: true,
+          max: 3,
+          f: () => S.mines++,
+          ok: () => S.mines < 3,
+        },
+        {
+          n: "Barrera orbital",
+          d: "+1 barrera orbital que bloquea proyectiles · máx. 3",
+          i: "shield",
+          r: 2,
+          key: "barrier",
+          fresh: true,
+          max: 3,
+          f: () => S.barrier++,
+          ok: () => S.barrier < 3,
+        },
+        {
+          n: "Tormenta",
+          d: "Cada pocos segundos caen rayos sobre enemigos cercanos · máx. 3",
+          i: "tesla",
+          r: 3,
+          key: "storm",
+          fresh: true,
+          max: 3,
+          f: () => S.storm++,
+          ok: () => S.storm < 3,
+        },
+        {
+          n: "Artillería",
+          d: "Cada 2,5 s cae un proyectil explosivo sobre un enemigo cercano · máx. 3",
+          i: "boom",
+          r: 3,
+          key: "artillery",
+          fresh: true,
+          max: 3,
+          f: () => S.artillery++,
+          ok: () => S.artillery < 3,
+        },
+        {
+          n: "Combustión",
+          d: "Cada 9/7/5 bajas, el enemigo explota dañando a los cercanos · máx. 3",
+          i: "flame",
+          r: 2,
+          key: "combustion",
+          fresh: true,
+          max: 3,
+          f: () => S.combustion++,
+          ok: () => S.combustion < 3,
+        },
+        {
+          n: "Radiación",
+          d: "Dañas a los enemigos cercanos continuamente; 14% de dañarte 2 (no mata) · máx. 3",
+          i: "vortex",
+          r: 3,
+          key: "radiation",
+          fresh: true,
+          max: 3,
+          f: () => S.radiation++,
+          ok: () => S.radiation < 3,
+        },
+        {
+          n: "Golpe cargado",
+          d: "Cada pocos segundos tu siguiente impacto hace mucho más daño · máx. 3",
+          i: "pulse",
+          r: 2,
+          key: "pumped",
+          fresh: true,
+          max: 3,
+          f: () => S.pumped++,
+          ok: () => S.pumped < 3,
+        },
+        {
+          n: "Racha crítica",
+          d: "+12% de daño por cada crítico consecutivo y nivel (hasta 5) · máx. 3",
+          i: "crit",
+          r: 2,
+          key: "critStreak",
+          fresh: true,
+          max: 3,
+          f: () => S.critStreak++,
+          ok: () => S.critStreak < 3,
+        },
+        {
+          n: "Ejecución",
+          d: "Los críticos pueden rematar a enemigos con menos de la mitad de vida (10% por nivel) · máx. 3",
+          i: "crit",
+          r: 2,
+          key: "execCrit",
+          fresh: true,
+          max: 3,
+          f: () => S.execCrit++,
+          ok: () => S.execCrit < 3,
+        },
+        {
+          n: "Asesino paciente",
+          d: "El daño crece un 4% por segundo desde tu última baja (hasta +100%) · máx. 3",
+          i: "predator",
+          r: 2,
+          key: "patient",
+          fresh: true,
+          max: 3,
+          f: () => S.patient++,
+          ok: () => S.patient < 3,
+        },
+        {
+          n: "Sed de sangre",
+          d: "Cada baja da +2% de daño por nivel durante 3 s (hasta 10 acumulaciones) · máx. 3",
+          i: "vamp",
+          r: 2,
+          key: "bloodlust",
+          fresh: true,
+          max: 3,
+          f: () => S.bloodlust++,
+          ok: () => S.bloodlust < 3,
+        },
+        {
+          n: "Anticipación",
+          d: "Esquivas garantizada el siguiente golpe (espera de 13/11/9 s) · máx. 3",
+          i: "speed",
+          r: 2,
+          key: "anticipate",
+          fresh: true,
+          max: 3,
+          f: () => S.anticipate++,
+          ok: () => S.anticipate < 3,
+        },
+        {
+          n: "Nova helada",
+          d: "Quieto 1 s congelas a los enemigos cercanos (espera de 20/16 s) · máx. 2",
+          i: "ice",
+          r: 2,
+          key: "frostNova",
+          fresh: true,
+          max: 2,
+          f: () => S.frostNova++,
+          ok: () => S.frostNova < 2,
+        },
+        {
+          n: "Salto de emergencia",
+          d: "Con menos del 25% de vida te teletransportas lejos y curas 12% (espera de 40/30 s) · máx. 2",
+          i: "wind",
+          r: 3,
+          key: "warp",
+          fresh: true,
+          max: 2,
+          f: () => S.warp++,
+          ok: () => S.warp < 2,
+        },
+        {
+          n: "Apuesta",
+          d: "Tus impactos hacen entre un 50% y un 200% de daño",
+          i: "crit",
+          r: 3,
+          key: "gambler",
+          fresh: true,
+          max: 1,
+          f: () => (S.gambler = 1),
+          ok: () => !S.gambler,
+        },
+        {
+          n: "Pacto de sangre",
+          d: "+28% de daño, pero pierdes 0,6 de vida/s (nunca te mata)",
+          i: "vamp",
+          r: 3,
+          key: "bloodPact",
+          fresh: true,
+          max: 1,
+          f: () => (S.bloodPact = 1),
+          ok: () => !S.bloodPact,
+        },
+        {
+          n: "Reflejos limitados",
+          d: "Esquivas los próximos 8 golpes",
+          i: "speed",
+          r: 3,
+          key: "freeDodge",
+          fresh: true,
+          max: 1,
+          f: () => (S.freeDodge = (S.freeDodge || 0) + 8),
+          ok: () => !S.freeDodge,
+        },
+        {
+          n: "Caja de Pandora",
+          d: "Cada dash provoca un efecto aleatorio",
+          i: "boost",
+          r: 3,
+          key: "pandora",
+          fresh: true,
+          max: 1,
+          f: () => (S.pandora = 1),
+          ok: () => !S.pandora,
+        },
+        {
+          n: "Huesos grandes",
+          d: "+60% de vida máxima, pero te mueves un 12% más lento",
+          i: "heart",
+          r: 3,
+          key: "bigBoned",
+          fresh: true,
+          max: 1,
+          f: () => { S.bigBoned = 1; const b = P.mhp; P.mhp *= 1.6; P.hp += P.mhp - b; P.spd *= 0.88; },
+          ok: () => !S.bigBoned,
+        },
       ];
       function addW() {
         Wt.push({ x: P.x, y: P.y, vx: 0, vy: 0, tr: [], sp: 0, impactT: 0 });
@@ -1367,6 +2097,12 @@
         hurtSrc = null;
         curShooter = "";
         decals.length = 0;
+        mines.length = 0;
+        shells.length = 0;
+        wells.length = 0;
+        rerollsThis = 0;
+        nextCurse = null;
+        curseFlash = null;
         currentPilotSlot = -1;
         massCooldownOffset = 0;
         daily = d;
@@ -1424,6 +2160,12 @@
           upgradeKeys: [],
           upgradeCounts: {},
           runPicks: [],
+          curses: [],
+          singularity: 0,
+          ghostEcho: 0,
+          crimsonTide: 0,
+          timeBreak: 0,
+          triad: 0,
           evolutions: [],
           evoImpact: 0,
           evoTesla: 0,
@@ -1465,6 +2207,66 @@
           bossDmg: 0,
           opener: 0,
           veteran: 0,
+          thorns: 0,
+          ultKill: 0,
+          dashHit: 0,
+          digest: 0,
+          gluttony: 0,
+          critHeal: 0,
+          tough: 0,
+          revenge: 0,
+          corpulent: 0,
+          trophy: 0,
+          shieldBlast: 0,
+          selfHeal: 0,
+          hotFire: 0,
+          bigBoom: 0,
+          finalFury: 0,
+          ivDrip: 0,
+          dodgeHeal: 0,
+          rechShield: 0,
+          saw: 0,
+          counter: 0,
+          recuperate: 0,
+          splash: 0,
+          poison: 0,
+          shrapnel: 0,
+          digIn: 0,
+          perfectionist: 0,
+          backstab: 0,
+          focus: 0,
+          pain: 0,
+          ironStance: 0,
+          topForm: 0,
+          shieldHeal: 0,
+          delayed: 0,
+          recPeriod: 0,
+          slippery: 0,
+          pauseHeal: 0,
+          warm: 0,
+          bigBrain: 0,
+          smallFry: 0,
+          heavy: 0,
+          mines: 0,
+          barrier: 0,
+          storm: 0,
+          artillery: 0,
+          combustion: 0,
+          radiation: 0,
+          pumped: 0,
+          critStreak: 0,
+          execCrit: 0,
+          patient: 0,
+          bloodlust: 0,
+          anticipate: 0,
+          frostNova: 0,
+          warp: 0,
+          gambler: 0,
+          bloodPact: 0,
+          freeDodge: 0,
+          pandora: 0,
+          bigBoned: 0,
+          delayQ: [],
         };
         Wt = [];
         addW();
@@ -1567,7 +2369,9 @@
         });
         director.log = [];
         directorLog("DIRECTOR", "Simulación inicializada · semilla " + seed);
+        applyMeta();
         nextRoom();
+        applyMetaPost();
       }
       function clamp(v, a, b) {
         return Math.max(a, Math.min(b, v));
@@ -1575,16 +2379,17 @@
       function updateRunPerksForPilot(dt) {
         if (!S) return;
         S.interceptClock = Math.max(0, (S.interceptClock || 0) - dt);
+        runPerkTick(dt);
         if (
           !S.stillRegen ||
-          runTime - director.lastDamage < 2 ||
+          runTime - director.lastDamage < 1.2 ||
           !P ||
           P.dead ||
-          Math.hypot(P.vx || 0, P.vy || 0) >= 26 ||
+          Math.hypot(P.vx || 0, P.vy || 0) >= 45 ||
           P.hp >= P.mhp
         )
           return;
-        P.hp = Math.min(P.mhp, P.hp + 0.05 * S.stillRegen * dt);
+        P.hp = Math.min(P.mhp, P.hp + 0.3 * S.stillRegen * dt);
       }
       function updateRunPerks(dt) {
         updateTutorial(dt);
@@ -2836,7 +3641,7 @@
           "right",
           "700",
         );
-        if (combo > 1) txt("COMBO ×" + combo, W / 2, H - 23, 13, "#ffca7a", "center", "800");
+        if (combo > 1) txt("COMBO ×" + combo, W / 2, H - 40, 13, "#ffca7a", "center", "800");
         drawThreatArrows();
       }
       function shoot(x, y, a, s, extra = null) {
@@ -3491,7 +4296,7 @@
         spark(P.x, P.y, "#83ffd0", 18);
         if (hpR < 0.35) P.inv = Math.max(P.inv || 0, 1.8);
         let chestMsg = "";
-        if (hpR < 0.5 && !chests.some((c) => !c.opened)) {
+        if (hpR < 0.5 && !chests.some((c) => !c.opened) && chestBudgetOk()) {
           const target = directorSupplyTarget();
           if (target && spawnDirectorChest(target)) chestMsg = " · cofre de ayuda";
         }
@@ -3758,13 +4563,19 @@
           opened: false,
           openT: 0,
         });
+        (director.chestTimes = director.chestTimes || []).push(runTime);
         return true;
+      }
+      /* Presupuesto de cofres: como mucho 2 cada 150 s y 45 s de separación mínima, pase lo que pase. */
+      function chestBudgetOk() {
+        const ts = (director.chestTimes = (director.chestTimes || []).filter((t) => runTime - t < 150));
+        return ts.length < 2 && (!ts.length || runTime - ts[ts.length - 1] >= 45);
       }
       function updateSupplyDirector(dt) {
         director.supplyClock = (director.supplyClock ?? 38) - dt;
         if (director.supplyClock > 0) return;
         director.supplyClock = R(9, 13);
-        if (runTime < 38 || chests.some((c) => !c.opened)) return;
+        if (runTime < 38 || chests.some((c) => !c.opened) || !chestBudgetOk()) return;
         const target = directorSupplyTarget();
         if (!target) return;
         const chance = clamp(0.045 + target.read.need * 0.72 + (director.supplyPity || 0), 0.045, 0.88);
@@ -3803,7 +4614,7 @@
             chest.openT = 0.5;
             const healed = Math.min(P.mhp - P.hp, P.mhp * chest.healRatio);
             P.hp = Math.min(P.mhp, P.hp + P.mhp * chest.healRatio);
-            P.ult = Math.min(100, (P.ult || 0) + chest.ult);
+            P.ult = Math.min(100, (P.ult || 0) + ultGain(P, chest.ult));
             P.dash = Math.max(0, (P.dash || 0) - chest.dash);
             const shieldGranted = chest.emergencyShield && P.hp / Math.max(1, P.mhp) < 0.38 && !P.shield;
             if (shieldGranted) P.shield = 1;
@@ -3946,6 +4757,12 @@
           director.pressure = clamp(director.pressure * 0.78 + director.threat * 0.22, 0, 100);
           director.populationCap = Math.min(POP_LIMIT_MAX, POP_LIMIT_BASE + Math.floor(runTime / 42) * 4);
           room = Math.max(1, 1 + Math.floor(runTime / 42 + Math.max(0, runTime - 300) * (1 / 28 - 1 / 42)) + (director.pace?.roomShift || 0));
+          if (director.lastRoomHeal != null && room > director.lastRoomHeal && S?.digest && P && !P.dead) {
+            P.hp = Math.min(P.mhp, P.hp + P.mhp * 0.06 * S.digest);
+            spark(P.x, P.y, "#83ffd0", 8);
+            healPop(P.mhp * 0.06 * S.digest);
+          }
+          director.lastRoomHeal = Math.max(director.lastRoomHeal ?? room, room);
           director.damageRecent *= 0.52;
           director.decisions++;
           if (!director.event && director.eventCooldown <= 0 && !bossAlive()) {
@@ -4230,7 +5047,29 @@
         }
         director.killTimes.push(runTime);
         director.lastCombat = runTime;
+        owner.lastKillAt = runTime;
+        if (S.bloodlust) {
+          owner.bloodN = Math.min(10, (owner.bloodN || 0) + 1);
+          owner.bloodT = runTime + 3;
+        }
+        if (S.combustion) {
+          owner.killN = (owner.killN || 0) + 1;
+          if (owner.killN >= Math.max(5, 11 - 2 * S.combustion)) {
+            owner.killN = 0;
+            rings.push({ x: e.x, y: e.y, r: 10, l: 0.35, c: "#ff7a3c", g: 320 });
+            spark(e.x, e.y, "#ff7a3c", 16);
+            for (const o of nearbyEnemies(e.x, e.y, 105))
+              if (o !== e) {
+                zap(e.x, e.y, o.x, o.y, "#ff7a3c", 2.4, 8, 0.22);
+                dotDamage(o, (e.mhp || 20) * 0.4, owner);
+              }
+          }
+        }
         if (S.vamp) owner.hp = Math.min(owner.mhp, owner.hp + S.vamp * 0.4);
+        if (S.crimsonTide) {
+          owner.hp = Math.min(owner.mhp, owner.hp + 2.5);
+          if (Math.random() < 0.3) spark(owner.x, owner.y, "#ff3a4f", 3);
+        }
         if (S.dashkill && owner.dash !== undefined) owner.dash = Math.max(0, owner.dash - 0.18 * S.dashkill);
         spark(e.x, e.y, T.c, isBossType(e.t) ? 60 : 14);
         if (parts.length < 1050)
@@ -4261,7 +5100,14 @@
               v: 1 + S.harvest * 0.12,
             });
         }
-        if (owner.ultCd <= 0) owner.ult = Math.min(100, owner.ult + (isBossType(e.t) ? 17 : T.s * 2.4 + 1.5));
+        if (owner.ultCd <= 0) owner.ult = Math.min(100, owner.ult + ultGain(owner, (isBossType(e.t) ? 17 : T.s * 2.4 + 1.5) * (1 + 0.25 * S.ultKill)));
+        if (S.trophy && (isBossType(e.t) || T.s >= 4)) {
+          owner.hp = Math.min(owner.mhp, owner.hp + owner.mhp * 0.2);
+          owner.ult = Math.min(100, owner.ult + ultGain(owner, 30));
+          rings.push({ x: owner.x, y: owner.y, r: 8, l: 0.4, c: "#ffe28a", g: 160 });
+          spark(owner.x, owner.y, "#ffe28a", 22);
+          healPop(owner.mhp * 0.2, "#ffe28a");
+        }
         if (S.boom) {
           rings.push({ x: e.x, y: e.y, r: 10, l: 0.3, c: "#ff9f1c", g: 320 });
           for (const o of enemies) {
@@ -4269,7 +5115,7 @@
             const dx = o.x - e.x,
               dy = o.y - e.y,
               d = Math.hypot(dx, dy) || 1;
-            if (d < 95) hit(o, 14 * S.boom * S.dmg, dx / d, dy / d, null, owner);
+            if (d < 95 * (1 + 0.2 * S.bigBoom)) hit(o, 14 * S.boom * S.dmg, dx / d, dy / d, null, owner);
           }
         }
         snd(380 + Math.min(combo, 20) * 25, 0.2, "sawtooth", 0.06, 0.3);
@@ -4294,7 +5140,16 @@
       }
       function hurtCore(d, owner = P) {
         if (!owner || owner.dead || owner.inv > 0) return;
-        if (S.dodge && rnd() < 0.04 * S.dodge) {
+        if (tryDodge(owner)) {
+          if (S.counter)
+            for (const e of nearbyEnemies(owner.x, owner.y, 130)) {
+              zap(owner.x, owner.y, e.x, e.y, "#ffffff", 2.4, 6, 0.2);
+              dotDamage(e, 16 * S.counter * S.dmg, owner);
+            }
+          if (S.dodgeHeal) {
+            owner.hp = Math.min(owner.mhp, owner.hp + 3 * S.dodgeHeal);
+            healPop(3 * S.dodgeHeal);
+          }
           owner.inv = Math.max(owner.inv, 0.3);
           rings.push({ x: owner.x, y: owner.y, r: 9, l: 0.25, c: "#e8f7ff", g: 110 });
           spark(owner.x, owner.y, "#e8f7ff", 8);
@@ -4308,19 +5163,79 @@
           personalScale =
             1 +
             (clamp(rawPersonalScale, serverCoop?.enabled ? 0.88 : 1, serverCoop?.enabled ? 1.72 : 1.88) - 1) * intro;
-        d *= personalScale * (0.72 + 0.28 * intro) * (1 - 0.05 * S.armor) * (1 + 0.05 * S.glass);
+        d *= personalScale * (0.72 + 0.28 * intro) * (1 - 0.05 * S.armor) * (1 + 0.05 * S.glass) * (1 + 0.25 * (S.curseBrittle || 0)) * (1 - 0.02 * (S.metaArmor || 0));
+        if (S.tough) d = Math.max(d * 0.5, d - 1.5 * S.tough);
+        if (S.ironStance && Math.hypot(owner.vx || 0, owner.vy || 0) < 45) d *= Math.pow(0.9, S.ironStance);
+        if (S.topForm && owner.hp >= owner.mhp * 0.98) d *= 1 - 0.15 * S.topForm;
         if (owner.shield > 0) {
           runStats.blocked++;
           director.damageBlockedWindow = (director.damageBlockedWindow || 0) + d;
           notePilotDamageReceived(owner, d, true);
           owner.shield = 0;
+          if (S.shieldHeal) owner.hp = Math.min(owner.mhp, owner.hp + 10 * S.shieldHeal);
           owner.inv = 0.7;
           rings.push({ x: owner.x, y: owner.y, r: 14, l: 0.4, c: "#8ecaff", g: 200 });
+          if (S.shieldBlast)
+            for (const e of enemies) {
+              if (e.dead || e.w > 0) continue;
+              const bx = e.x - owner.x, by = e.y - owner.y, bl = Math.hypot(bx, by) || 1;
+              if (bl < 150 + e.r) {
+                zap(owner.x, owner.y, e.x, e.y, "#8ecaff", 3, 8, 0.22);
+                hit(e, 30 * S.dmg, bx / bl, by / bl, null, owner);
+              }
+            }
           return;
         }
         notePilotDamageReceived(owner, d, false);
         runStats.taken += d;
         owner.hp -= d;
+        if (S.pain) owner.painT = runTime + 4;
+        if (S.delayed) (S.delayQ = S.delayQ || []).push({ t: runTime + 5, v: d * (0.1 + 0.15 * S.delayed) });
+        if (owner.warmN) {
+          owner.spd /= Math.pow(1.012, owner.warmN);
+          owner.warmN = 0;
+        }
+        if (S.warp && owner.hp > 0 && owner.hp / owner.mhp < 0.25 && runTime >= (owner.warpAt || 0)) {
+          owner.warpAt = runTime + Math.max(25, 50 - 10 * S.warp);
+          let best = null, bestD = -1;
+          for (let i = 0; i < 14; i++) {
+            const px = R(80, MW - 80), py = R(80, MH - 80);
+            let md = 1e9;
+            for (const e of enemies) if (!e.dead) md = Math.min(md, Math.hypot(e.x - px, e.y - py));
+            if (md > bestD) {
+              bestD = md;
+              best = { x: px, y: py };
+            }
+          }
+          if (best) {
+            spark(owner.x, owner.y, "#c39bff", 18);
+            zap(owner.x, owner.y, best.x, best.y, "#c39bff", 4, 30, 0.4);
+            owner.x = best.x;
+            owner.y = best.y;
+            owner.vx = owner.vy = 0;
+            for (const w of Wt) {
+              w.x = owner.x;
+              w.y = owner.y;
+              w.vx = w.vy = 0;
+            }
+            owner.hp = Math.min(owner.mhp, owner.hp + owner.mhp * 0.12);
+            owner.shield = owner.shield || 0;
+            rings.push({ x: owner.x, y: owner.y, r: 10, l: 0.5, c: "#c39bff", g: 260 });
+            spark(owner.x, owner.y, "#c39bff", 18);
+          }
+        }
+        if (S.revenge && runTime - (owner.revAt ?? -9) > 1.5) {
+          owner.revAt = runTime;
+          rings.push({ x: owner.x, y: owner.y, r: 10, l: 0.4, c: "#ff7a59", g: 300 });
+          for (const e of enemies) {
+            if (e.dead || e.w > 0) continue;
+            const rx = e.x - owner.x, ry = e.y - owner.y, rl = Math.hypot(rx, ry) || 1;
+            if (rl < 120 + e.r) {
+              zap(owner.x, owner.y, e.x, e.y, "#ff7a59", 3, 8, 0.22);
+              hit(e, 14 * S.revenge * S.dmg, rx / rl, ry / rl, null, owner);
+            }
+          }
+        }
         if (owner.hp <= 0 && S.lastStand && !owner.lastStandUsed) {
           owner.lastStandUsed = true;
           owner.hp = 1;
@@ -4336,7 +5251,7 @@
         director.damageReceivedWindow = (director.damageReceivedWindow || 0) + d;
         director.lastDamage = runTime;
         director.lastDamageAt = runTime;
-        owner.inv = 0.9 + (owner.lastStandInv || 0);
+        owner.inv = 0.9 + 0.25 * S.recPeriod + (owner.lastStandInv || 0);
         owner.lastStandInv = 0;
         if (owner.hp / owner.mhp < 0.25 && !dangerAlerted) {
           notifyUI("VIDA CRÍTICA · rompe contacto", "critical", "low-health");
@@ -4381,6 +5296,13 @@
         try {
           localStorage.setItem("tether_best", JSON.stringify(best));
         } catch (e) {}
+        if (!serverCoop?.enabled) {
+          const gain = Math.round((room * 6 + runTime / 12 + kills * 0.15 + (level - 1) * 3) * (1 + 0.1 * skillLv("u5")));
+          meta.f += gain;
+          meta.last = gain;
+          meta.runs = (meta.runs || 0) + 1;
+          saveMeta();
+        }
       }
       function inp() {
         if (serverCoop?.enabled) {
@@ -4406,6 +5328,17 @@
         ensurePilotMasses(1);
       }
       function triggerRunImpactPerks(e, owner, damage, ux, uy, returning) {
+        if (S.ghostEcho && runTime >= (owner.echoT || 0)) {
+          owner.echoT = runTime + 0.12;
+          let n = 0;
+          for (const o of nearbyEnemies(e.x, e.y, 190)) {
+            if (o === e) continue;
+            zap(e.x, e.y, o.x, o.y, "#ff9bf0", 2.6, 8, 0.25);
+            spark(o.x, o.y, "#ff9bf0", 5);
+            dotDamage(o, damage * 0.5, owner);
+            if (++n >= 2) break;
+          }
+        }
         if (S.fracture) {
           e.fractureHits = (e.fractureHits || 0) + 1;
           if (e.fractureHits >= 3) {
@@ -4487,9 +5420,26 @@
             (1 + S.frenzy * Math.min(combo, 25) * 0.02) *
             (1 + 0.3 * S.bounce) *
             (crit ? 1.8 + S.critDmg : 1) *
-            (S.evoImpact ? 1.12 : 1);
+            (S.evoImpact ? 1.12 : 1) *
+            impactMulOf(owner, e, ix / inorm, iy / inorm, crit);
         if (crit) triggerImpactFrames(e, w, owner);
         hit(e, damage, ix / inorm, iy / inorm, w, owner);
+        if (S.splash && rnd() < 0.1 + 0.04 * S.splash) {
+          rings.push({ x: e.x, y: e.y, r: 8, l: 0.25, c: "#ffb703", g: 220 });
+          for (const o of nearbyEnemies(e.x, e.y, 70))
+            if (o !== e) {
+              zap(e.x, e.y, o.x, o.y, "#ffb703", 1.6, 5, 0.16);
+              dotDamage(o, damage * 0.35, owner);
+            }
+        }
+        if (S.poison && rnd() < 0.1 + 0.1 * S.poison) {
+          e.poisonT = 4;
+          e.poisonLvl = S.poison;
+        }
+        if (crit && S.execCrit && !e.dead && !isBossType(e.t) && e.hp < e.mhp * 0.5 && rnd() < 0.1 * S.execCrit)
+          dotDamage(e, e.hp + 1, owner);
+        if (S.dashHit) owner.dash = Math.max(0, (owner.dash || 0) - 0.05 * S.dashHit);
+        if (crit && S.critHeal) owner.hp = Math.min(owner.mhp, owner.hp + 0.4 * S.critHeal);
         if (crit && S.critDash) owner.dash = Math.max(0, (owner.dash || 0) - 0.08 * S.critDash);
         if (S.stagger) e.staggerT = Math.max(e.staggerT || 0, 0.11 * S.stagger);
         triggerRunImpactPerks(e, owner, damage, ix / inorm, iy / inorm, returning);
@@ -4695,6 +5645,7 @@
         const p = peer.player;
         if (p.dead || p.ult < 100) return;
         p.ult = 0;
+        p.ultUses = (p.ultUses || 0) + 1;
         p.ultCd = 2.4;
         p.inv = Math.max(p.inv, 0.8);
         rings.push(
@@ -4847,6 +5798,8 @@
         P.dt = 0.15 + 0.035 * S.dashTime;
         P.inv = Math.max(P.inv, 0.3 + 0.1 * S.ghostDash);
         P.dashExtra = extraDash ? 0 : S.doubleDash ? 1 : 0;
+        if (S.mines && mines.length < 2 + 2 * S.mines) mines.push({ x: P.x, y: P.y, t: 0, lvl: S.mines });
+        if (S.pandora) pandora();
         P.dash = P.dcd;
         P.dashStrikeT = S.dashTrail ? 0.22 : 0;
         P.dashHitIds = [];
@@ -4868,6 +5821,7 @@
         tutorial.ulted = 1;
         runStats.ults++;
         P.ult = 0;
+        P.ultUses = (P.ultUses || 0) + 1;
         P.ultCd = 2.4;
         P.inv = Math.max(P.inv, 0.8);
         if (S.ultGuard) {
@@ -4893,13 +5847,14 @@
         hs = 0.1;
         snd(90, 0.6, "sawtooth", 0.2, 3);
       }
-      function makeOffer() {
-        const pool = U.filter((u) => !u.ok || u.ok()),
-          out = [];
+      function makeOffer(exclude = []) {
+        const base = U.filter((u) => (!u.ok || u.ok()) && (u.r < 3 || level >= [0, 0, 0, 3, 5, 8][u.r]));
+        let pool = base.filter((u) => !exclude.includes(u.n));
+        if (pool.length < 3) pool = base.slice();
+        const out = [],
+          RW = [5, 2.8, 1.1, 1.5, 2.6, 1.0];
         while (out.length < 3 && pool.length) {
-          const weights = pool.map(
-              (u) => (u.r === 2 ? 1.25 : u.r === 1 ? 2.8 : 5) * (u.fresh && !(S.upgradeCounts[u.key] || 0) ? 1.65 : 1),
-            ),
+          const weights = pool.map((u) => RW[u.r || 0] * (u.r >= 2 ? 1 + 0.12 * (S.metaLuck || 0) : 1) * (u.fresh && !(S.upgradeCounts[u.key] || 0) ? 1.65 : 1)),
             total = weights.reduce((a, b) => a + b, 0);
           let roll = rnd() * total,
             j = 0;
@@ -4923,6 +5878,8 @@
           }
           offer = serverCoop.players[0]?.offer || [];
         } else offer = makeOffer();
+        rerollsThis = 0;
+        nextCurse = null;
         st = "pick";
         pickT = 0;
         hs = 0.045;
@@ -5327,6 +6284,15 @@
         e.linkT = Math.max(0, (e.linkT || 0) - dt);
         e.vortexT = Math.max(0, (e.vortexT || 0) - dt);
         e.markT = Math.max(0, (e.markT || 0) - dt);
+        if (e.poisonT > 0) {
+          e.poisonT -= dt;
+          e.poisonClock = (e.poisonClock || 0) - dt;
+          if (e.poisonClock <= 0) {
+            e.poisonClock = 0.5;
+            spark(e.x, e.y, "#a3e635", 2);
+            dotDamage(e, 1.3 * (e.poisonLvl || 1) * S.dmg, P);
+          }
+        }
         if (e.burnT > 0) {
           e.burnT = Math.max(0, e.burnT - dt);
           e.burnClock = (e.burnClock || 0) - dt;
@@ -5335,7 +6301,7 @@
             e.hpBar = e.hpBar ?? e.hp;
             const burnSlot = e.burnOwnerSlot ?? currentPilotSlot,
               burnBuild = serverCoop?.enabled && burnSlot >= 0 ? serverCoop.players[burnSlot]?.build : null,
-              emberDamage = 1.65 * (burnBuild?.ember || S.ember);
+              emberDamage = 1.65 * (burnBuild?.ember || S.ember) * (1 + 0.2 * S.hotFire);
             e.hp -= emberDamage;
             e.hurtT = 0.2;
             director.damageDealtWindow = (director.damageDealtWindow || 0) + emberDamage;
@@ -5366,6 +6332,7 @@
           sp = T.sp * (1 + room * 0.009 + Math.floor(runTime / 70) * 0.025);
         const biome = sectorAt(e.x, e.y)?.biome.n;
         if ((e.t == "stalker" || e.t == "predator") && biome == "UMBRA") sp *= 1.14;
+        if (P && P.tbFreeze > 0) sp *= 0.04;
         if (e.jam > 0) {
           sp *= 0.62;
           e.jam = Math.max(0, e.jam - dt);
@@ -6311,6 +7278,13 @@
         const d = Math.hypot(P.x - e.x, P.y - e.y);
         if (e.t != "guardian" && !e.phased && d < e.r + 9) {
           hurtSrc = { t: e.t, contact: 1 };
+          if (S.thorns && !(P.inv > 0) && !(e.thornT > 0)) {
+            e.thornT = 0.6;
+            const tx = e.x - P.x, ty = e.y - P.y, tl = Math.hypot(tx, ty) || 1;
+            hit(e, 14 * S.thorns, tx / tl, ty / tl);
+            zap(P.x, P.y, e.x, e.y, "#ff7a59", 2.4, 5, 0.18);
+            spark(e.x, e.y, "#ff7a59", 8);
+          }
           hurt(
             isBossType(e.t) ? 20 + 2 * (e.bossRank || 0) : e.t == "tank" ? 16 : e.t == "dasher" && e.st == 2 ? 14 : 10,
           );
@@ -6564,7 +7538,7 @@
           mdy = touchAimActive ? touchAim.y * (S.L * 1.35) : mouse.y + cam.y - P.y,
           md = Math.hypot(mdx, mdy) || 1,
           rr = Math.min(md, S.L * 0.98),
-          ba = Math.atan2(mdy, mdx);
+          ba = curseAimAngle(Math.atan2(mdy, mdx));
         Wt.forEach((w, i) => {
           if (P.dead) return;
           const a = ba + (i * 6.283) / S.n,
@@ -6692,9 +7666,15 @@
                 orbs.splice(i, 1);
                 const energy = sectorAt(target.x, target.y)?.biome.n == "ENERGÉTICO" ? 1.18 : 1;
                 sh += o.v * energy;
-                xp += (o.xp || 1) * energy;
+                xp += (o.xp || 1) * energy * (1 + 0.2 * S.gluttony) * (1 + 0.12 * S.bigBrain) * (1 + 0.06 * (S.metaXp || 0));
+                if (S.shrapnel)
+                  for (const e of nearbyEnemies(target.x, target.y, 100)) {
+                    zap(o.x, o.y, e.x, e.y, "#7df9ff", 1.6, 6, 0.18);
+                    spark(e.x, e.y, "#7df9ff", 4);
+                    dotDamage(e, 1.6 * S.shrapnel * (o.xp || 1), target);
+                  }
                 if (S.xpHeal) target.hp = Math.min(target.mhp, target.hp + 0.3 * S.xpHeal * (o.xp || 1) * energy);
-                if (target.ultCd <= 0) target.ult = Math.min(100, target.ult + 0.9 * energy * (1 + 0.1 * S.orbCharge));
+                if (target.ultCd <= 0) target.ult = Math.min(100, target.ult + ultGain(target, 0.9 * energy * (1 + 0.1 * S.orbCharge)));
                 pk = Math.min(24, pk + 1);
                 pkT = 0.6;
                 snd(500 + pk * 35, 0.06, "sine", 0.035, 1.3);
@@ -6847,7 +7827,7 @@
         X.fillStyle = accent;
         X.fillRect(x + 12, y, Math.min(34, Math.max(0, w - 24)), 2);
       }
-      function drawButton(x, y, w, h, label, sub = "", active = false) {
+      function drawButton(x, y, w, h, label, sub = "", active = false, hasDesc = false) {
         uiButtons.push({ x, y, w, h, active });
         const hover = inRect(mouse.x, mouse.y, x, y, w, h),
           a = active ? "rgba(" + ACC + ",.19)" : hover ? "rgba(" + ACC + ",.12)" : "rgba(255,255,255,.035)";
@@ -6865,32 +7845,446 @@
         txt(
           label,
           x + 16,
-          y + h / 2 + (sub ? -2 : 5),
+          y + h / 2 + (hasDesc ? -2 : 5),
           14,
           active ? "#b9ebdf" : "#e3e9ed",
           "left",
           "700",
           Math.max(24, w - 32 - subWidth - 12),
         );
-        if (sub) txt(sub, x + w - 12, y + h / 2 + 4, 10, "#84929d", "right", "500", subWidth);
+        if (sub) txt(sub, x + w - 12, y + h / 2 + (hasDesc ? 4 : 5), 10, "#84929d", "right", "500", subWidth);
         return hover;
+      }
+
+      /* ---- Árbol de habilidades (metaprogresión entre runs) ---- */
+      let meta = { f: 0, lv: {}, runs: 0, last: 0 },
+        skillFrom = "menu",
+        respecArmed = false;
+      try {
+        const m = JSON.parse(localStorage.getItem("tether_meta") || "{}");
+        meta = Object.assign(meta, m);
+        meta.lv = meta.lv || {};
+      } catch (e) {}
+      function saveMeta() {
+        try {
+          localStorage.setItem("tether_meta", JSON.stringify(meta));
+        } catch (e) {}
+      }
+      const SK_BR = [
+        { n: "ATAQUE", c: "#ff8a5c", nodes: [
+          { id: "a1", n: "Impacto base", d: "+4% de daño por nivel", i: "mass", max: 5 },
+          { id: "a2", n: "Cadena extendida", d: "+4% de alcance de cadena por nivel", i: "chain", max: 3 },
+          { id: "a3", n: "Ojo de cazador", d: "+1,5% de probabilidad crítica por nivel", i: "crit", max: 3 },
+          { id: "a4", n: "Pulso veloz", d: "+10% de carga de pulso por nivel", i: "pulse", max: 3 },
+          { id: "a5", n: "Arsenal inicial", d: "Empiezas la run con una mejora común o avanzada al azar", i: "gift", max: 1 },
+          { id: "a6", n: "Aniquilador", d: "Clave · +15% de daño y +20% de daño crítico", i: "crown", max: 1, key: 1 },
+        ] },
+        { n: "DEFENSA", c: "#79b6ff", nodes: [
+          { id: "d1", n: "Constitución", d: "+8 de vida máxima por nivel", i: "heart", max: 5 },
+          { id: "d2", n: "Armadura", d: "-2% de daño recibido por nivel", i: "shield", max: 3 },
+          { id: "d3", n: "Regeneración", d: "+0,12 de vida/s por nivel", i: "heartplus", max: 3 },
+          { id: "d4", n: "Escudo inicial", d: "Empiezas la run con un escudo", i: "shieldplus", max: 1 },
+          { id: "d5", n: "Último aliento", d: "Sobrevives a un golpe letal una vez por run", i: "repair", max: 1 },
+          { id: "d6", n: "Coraza", d: "Clave · +20% de vida máxima y +0,25 s de invulnerabilidad al recibir daño", i: "gem", max: 1, key: 1 },
+        ] },
+        { n: "MOVILIDAD", c: "#5ef2ff", nodes: [
+          { id: "m1", n: "Zancada", d: "+3% de velocidad por nivel", i: "wind", max: 5 },
+          { id: "m2", n: "Dash ágil", d: "-4% de enfriamiento del dash por nivel", i: "dash", max: 4 },
+          { id: "m3", n: "Dash largo", d: "El dash llega más lejos y dura más", i: "dash2", max: 2 },
+          { id: "m4", n: "Resorte", d: "La masa responde un 6% más rápido por nivel", i: "orbit", max: 3 },
+          { id: "m5", n: "Paso fantasma", d: "+0,1 s de invulnerabilidad al hacer dash", i: "ghost", max: 1 },
+          { id: "m6", n: "Vector doble", d: "Clave · puedes encadenar un segundo dash", i: "warp", max: 1, key: 1 },
+        ] },
+        { n: "UTILIDAD", c: "#5fe0a0", nodes: [
+          { id: "u1", n: "Aprendizaje", d: "+6% de experiencia por nivel", i: "bulb", max: 5 },
+          { id: "u2", n: "Imán", d: "+30 de radio de atracción de núcleos por nivel", i: "scrap", max: 3 },
+          { id: "u3", n: "Suerte", d: "+12% de probabilidad de rarezas exótica o superior por nivel", i: "dice", max: 3 },
+          { id: "u4", n: "Re-roll limpio", d: "Un re-roll sin maldición por nivel y run", i: "echo", max: 2 },
+          { id: "u5", n: "Botín", d: "+10% de fragmentos al terminar cada run por nivel", i: "trophy", max: 3 },
+          { id: "u6", n: "Arranque", d: "Clave · empiezas la run eligiendo una mejora", i: "star", max: 1, key: 1 },
+        ] },
+      ];
+      const skillLv = (id) => (meta.lv && meta.lv[id]) || 0;
+      const skillCost = (i, n) => Math.round((12 + 15 * i) * (1 + 0.55 * (n - 1)));
+      function skillsSpent() {
+        let t = 0;
+        SK_BR.forEach((b) => b.nodes.forEach((nd, i) => { for (let n = 1; n <= skillLv(nd.id); n++) t += skillCost(i, n); }));
+        return t;
+      }
+      function skillsOwned() {
+        let t = 0, all = 0;
+        SK_BR.forEach((b) => b.nodes.forEach((nd) => { t += skillLv(nd.id) > 0 ? 1 : 0; all++; }));
+        return [t, all];
+      }
+      const skillUnlocked = (b, i) => i === 0 || skillLv(SK_BR[b].nodes[i - 1].id) > 0;
+      function openSkills(from) {
+        skillFrom = from;
+        respecArmed = false;
+        st = "skills";
+      }
+      function buySkill(b, i) {
+        const nd = SK_BR[b].nodes[i], lv = skillLv(nd.id);
+        if (lv >= nd.max || !skillUnlocked(b, i)) return snd(110, 0.1, "square", 0.06, 0.6);
+        const cost = skillCost(i, lv + 1);
+        if (meta.f < cost) return snd(110, 0.12, "square", 0.07, 0.6);
+        meta.f -= cost;
+        meta.lv[nd.id] = lv + 1;
+        saveMeta();
+        const { x: cx, y: cy } = skillPos(b, i);
+        uiSparks.push({ ring: 1, x: cx, y: cy, r: 8, l: 0.5, m: 0.5, c: SK_BR[b].c, g: 300 });
+        uiBurst(cx, cy, nd.key ? 4 : 1, 0.5);
+        [523, 659, 784].forEach((f, k) => setTimeout(() => snd(f, 0.1, "triangle", 0.05, 1), k * 60));
+      }
+      function clickSkills() {
+        for (let b = 0; b < 4; b++)
+          for (let i = 0; i < 6; i++) {
+            const p = skillPos(b, i);
+            if (Math.hypot(mouse.x - p.x, mouse.y - p.y) < 27) return buySkill(b, i);
+          }
+        if (inRect(mouse.x, mouse.y, 758, 38, 142, 28)) {
+          if (!respecArmed) respecArmed = true;
+          else {
+            meta.f += skillsSpent();
+            meta.lv = {};
+            respecArmed = false;
+            saveMeta();
+          }
+        } else if (inRect(mouse.x, mouse.y, 60, 38, 122, 28)) {
+          st = skillFrom;
+          respecArmed = false;
+        }
+      }
+      function applyMeta() {
+        if (serverCoop?.enabled) return;
+        const L = skillLv;
+        S.dmg *= 1 + 0.04 * L("a1");
+        S.L *= 1 + 0.04 * L("a2");
+        S.crit += 0.015 * L("a3");
+        S.metaUlt = L("a4");
+        if (L("a6")) {
+          S.dmg *= 1.15;
+          S.critDmg += 0.2;
+        }
+        P.mhp += 8 * L("d1");
+        if (L("d6")) {
+          P.mhp *= 1.2;
+          S.recPeriod = (S.recPeriod || 0) + 1;
+        }
+        P.hp = P.mhp;
+        hpTrail = P.hp;
+        S.metaArmor = L("d2");
+        S.metaRegen = 0.12 * L("d3");
+        if (L("d5")) S.lastStand = 1;
+        P.spd *= 1 + 0.03 * L("m1");
+        P.dcd *= 1 - 0.04 * L("m2");
+        S.dashTime += 0.5 * L("m3");
+        S.k *= 1 + 0.06 * L("m4");
+        if (L("m5")) S.ghostDash = Math.max(S.ghostDash || 0, 1);
+        if (L("m6")) S.doubleDash = 1;
+        S.metaXp = L("u1");
+        S.mag += 0.5 * L("u2");
+        S.metaLuck = L("u3");
+        S.freeRerolls = L("u4");
+      }
+      function applyMetaPost() {
+        if (serverCoop?.enabled) return;
+        if (skillLv("d4")) P.shield = 1;
+        if (skillLv("a5")) {
+          const pool = U.filter((u) => u.r <= 1 && (!u.ok || u.ok()));
+          const u = pool[Math.floor(Math.random() * pool.length)];
+          if (u) {
+            S.runPicks.push(u.n);
+            S.upgradeCounts[u.key || u.n] = (S.upgradeCounts[u.key || u.n] || 0) + 1;
+            u.f();
+            if (u.key) S.upgradeKeys.push(u.key);
+          }
+        }
+        if (skillLv("u6")) openLevelChoices();
+      }
+      function drawGlyph(kind, x, y, size, color, lw = 1.8) {
+        const g = ICONS[kind] || ICONS.star || [];
+        X.save();
+        X.translate(x - size / 2, y - size / 2);
+        X.scale(size / 24, size / 24);
+        X.lineCap = "round";
+        X.lineJoin = "round";
+        for (const d of g) {
+          const fill = d[0] === "~", p = new Path2D(fill ? d.slice(1) : d);
+          if (fill) {
+            X.fillStyle = color + "55";
+            X.fill(p);
+          }
+          X.strokeStyle = color;
+          X.lineWidth = lw;
+          X.stroke(p);
+        }
+        X.restore();
+      }
+      /* constelación: cuatro brazos curvos que salen de un núcleo central */
+      const SK_SIGN = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+      const SK_STARS = Array.from({ length: 95 }, (_, i) => {
+        const r = (n) => { const v = Math.sin(i * 127.1 + n * 311.7) * 43758.5453; return v - Math.floor(v); };
+        return { x: 46 + r(1) * 868, y: 34 + r(2) * 532, z: 0.2 + r(3) * 0.8, p: r(4) * 6.28, s: 0.6 + r(5) * 1.5 };
+      });
+      function skillPos(b, i) {
+        const t = i / 5, [sx, sy] = SK_SIGN[b];
+        return { x: 480 + sx * (86 + 284 * t), y: 300 + sy * (38 + 148 * t + 26 * Math.sin(Math.PI * t)) };
+      }
+      function skillLinkCtl(a, c, b) {
+        const mx = (a.x + c.x) / 2, my = (a.y + c.y) / 2, dx = c.x - a.x, dy = c.y - a.y, l = Math.hypot(dx, dy) || 1, k = (b % 2 ? 1 : -1) * 11;
+        return { x: mx - (dy / l) * k, y: my + (dx / l) * k };
+      }
+      function skillPath(kind, x, y, r, rot) {
+        X.beginPath();
+        if (kind === "star")
+          for (let k = 0; k < 16; k++) {
+            const a = rot + (k * Math.PI) / 8 - Math.PI / 2, rr = k % 2 ? r * 0.64 : r * 1.12;
+            X[k ? "lineTo" : "moveTo"](x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+          }
+        else
+          for (let k = 0; k < 6; k++) {
+            const a = rot + (k * Math.PI) / 3 - Math.PI / 2;
+            X[k ? "lineTo" : "moveTo"](x + Math.cos(a) * r, y + Math.sin(a) * r);
+          }
+        X.closePath();
+      }
+      function drawSkills() {
+        const calm = uiPrefs.reducedMotion, tt = calm ? 0 : performance.now() * 0.001,
+          px = (mouse.x - 480) * 0.03, py = (mouse.y - 300) * 0.03;
+        X.fillStyle = "rgba(3,6,10,.95)";
+        X.fillRect(0, 0, W, H);
+        drawPanel(40, 28, 880, 544, "rgba(255,217,138,.3)", "rgba(5,8,13,.98)");
+        X.save();
+        X.beginPath();
+        X.rect(41, 29, 878, 542);
+        X.clip();
+        SK_BR.forEach((br, b) => {
+          const p = skillPos(b, 3), g = X.createRadialGradient(p.x, p.y, 10, p.x, p.y, 240);
+          g.addColorStop(0, br.c + "26");
+          g.addColorStop(1, br.c + "00");
+          X.fillStyle = g;
+          X.fillRect(41, 29, 878, 542);
+        });
+        for (const st2 of SK_STARS) {
+          const a = 0.25 + 0.5 * (0.5 + 0.5 * Math.sin(tt * (0.6 + st2.z) + st2.p));
+          X.globalAlpha = a * st2.z;
+          X.fillStyle = "#cfe3ff";
+          X.beginPath();
+          X.arc(st2.x - px * st2.z * 2, st2.y - py * st2.z * 2 + (calm ? 0 : Math.sin(tt * 0.3 + st2.p) * 2), st2.s * st2.z, 0, 6.283);
+          X.fill();
+        }
+        X.globalAlpha = 1;
+        let hov = null;
+        const hub = { x: 480, y: 300 };
+        // enlaces
+        SK_BR.forEach((br, b) => {
+          br.nodes.forEach((nd, i) => {
+            const A = i ? skillPos(b, i - 1) : hub, B = skillPos(b, i), C = skillLinkCtl(A, B, b), on = i === 0 || skillLv(br.nodes[i - 1].id) > 0,
+              live = skillLv(nd.id) > 0 || i === 0 ? on : false;
+            X.save();
+            X.lineCap = "round";
+            X.beginPath();
+            X.moveTo(A.x, A.y);
+            X.quadraticCurveTo(C.x, C.y, B.x, B.y);
+            if (on) {
+              X.strokeStyle = br.c + (skillLv(nd.id) > 0 ? "cc" : "55");
+              X.lineWidth = skillLv(nd.id) > 0 ? 3 : 2;
+              X.shadowColor = br.c;
+              X.shadowBlur = skillLv(nd.id) > 0 ? 8 : 0;
+            } else {
+              X.strokeStyle = "rgba(150,165,180,.2)";
+              X.lineWidth = 1.5;
+              X.setLineDash([3, 6]);
+            }
+            X.stroke();
+            X.restore();
+            if (on && !calm && (skillLv(nd.id) > 0 || i === 0 || skillLv(br.nodes[i - 1].id) > 0)) {
+              const n = skillLv(nd.id) > 0 ? 2 : 1;
+              for (let k = 0; k < n; k++) {
+                const u = (tt * 0.45 + k / n + b * 0.2 + i * 0.13) % 1, v = 1 - u,
+                  qx = v * v * A.x + 2 * v * u * C.x + u * u * B.x, qy = v * v * A.y + 2 * v * u * C.y + u * u * B.y;
+                X.save();
+                X.globalCompositeOperation = "lighter";
+                X.fillStyle = br.c;
+                X.shadowColor = br.c;
+                X.shadowBlur = 10;
+                X.globalAlpha = skillLv(nd.id) > 0 ? 0.95 : 0.45;
+                X.beginPath();
+                X.arc(qx, qy, 2.4, 0, 6.283);
+                X.fill();
+                X.restore();
+              }
+            }
+          });
+        });
+        // nodos
+        SK_BR.forEach((br, b) => {
+          br.nodes.forEach((nd, i) => {
+            const P2 = skillPos(b, i), lv = skillLv(nd.id), unl = skillUnlocked(b, i), maxed = lv >= nd.max,
+              cost = maxed ? 0 : skillCost(i, lv + 1), can = unl && !maxed && meta.f >= cost,
+              over = Math.hypot(mouse.x - P2.x, mouse.y - P2.y) < 27,
+              bob = calm ? 0 : Math.sin(tt * 1.3 + b * 1.7 + i * 0.9) * 1.6,
+              x = P2.x, y = P2.y + bob, r = (nd.key ? 22 : 19) * (over ? 1.16 : 1);
+            uiButtons.push({ x: P2.x - 24, y: P2.y - 24, w: 48, h: 48, active: false });
+            if (over) hov = { b, i, nd, lv, unl, maxed, cost, can };
+            X.save();
+            if (can && !calm) {
+              const k = (tt * 0.8 + i * 0.3) % 1;
+              X.globalAlpha = (1 - k) * 0.6;
+              X.strokeStyle = br.c;
+              X.lineWidth = 2;
+              X.beginPath();
+              X.arc(x, y, r + 4 + k * 16, 0, 6.283);
+              X.stroke();
+              X.globalAlpha = 1;
+            }
+            if (unl && (can || over || maxed || lv > 0)) {
+              X.shadowColor = maxed ? "#ffe28a" : br.c;
+              X.shadowBlur = (maxed ? 14 : 8) + (over ? 10 : 0) + (can && !calm ? 6 * Math.sin(tt * 4) : 0);
+            }
+            skillPath(nd.key ? "star" : "hex", x, y, r, nd.key && !calm ? tt * 0.25 : 0);
+            const g = X.createRadialGradient(x - 4, y - 5, 2, x, y, r + 4);
+            g.addColorStop(0, lv > 0 ? br.c + "55" : unl ? "#16202a" : "#0d1319");
+            g.addColorStop(1, "#070b10");
+            X.fillStyle = g;
+            X.fill();
+            X.strokeStyle = maxed ? "#ffe28a" : unl ? br.c : "rgba(150,165,180,.3)";
+            X.lineWidth = nd.key ? 2.6 : 2.2;
+            X.stroke();
+            X.restore();
+            if (lv > 0 && !maxed) {
+              X.strokeStyle = br.c;
+              X.lineWidth = 2.6;
+              X.beginPath();
+              X.arc(x, y, r + 6, -1.5708, -1.5708 + 6.283 * (lv / nd.max));
+              X.stroke();
+            }
+            drawGlyph(nd.i, x, y, nd.key ? 22 : 21, unl ? (maxed ? "#ffe28a" : lv > 0 ? "#ffffff" : br.c) : "#4a5762");
+            if (nd.max > 1 && lv > 0) {
+              X.fillStyle = "#05080c";
+              X.beginPath();
+              X.arc(x + r * 0.78, y + r * 0.78, 7.5, 0, 6.283);
+              X.fill();
+              X.strokeStyle = maxed ? "#ffe28a" : br.c;
+              X.lineWidth = 1.3;
+              X.stroke();
+              txt("" + lv, x + r * 0.78, y + r * 0.78 + 3.2, 8.5, "#fff", "center", "800");
+            }
+            if (!unl) {
+              X.strokeStyle = "rgba(150,165,180,.5)";
+              X.lineWidth = 1.5;
+              X.strokeRect(x - 4, y + r * 0.5, 8, 6);
+            }
+          });
+        });
+        // núcleo central
+        {
+          let tot = 0, totMax = 0;
+          const fr = SK_BR.map((br) => {
+            let a = 0, m = 0;
+            br.nodes.forEach((nd) => { a += skillLv(nd.id); m += nd.max; });
+            tot += a;
+            totMax += m;
+            return a / m;
+          });
+          X.save();
+          X.translate(480, 300);
+          X.strokeStyle = "rgba(255,217,138,.35)";
+          X.lineWidth = 1.2;
+          X.setLineDash([4, 7]);
+          X.lineDashOffset = -tt * 14;
+          X.beginPath();
+          X.arc(0, 0, 60, 0, 6.283);
+          X.stroke();
+          X.setLineDash([]);
+          SK_BR.forEach((br, b) => {
+            const [sx, sy] = SK_SIGN[b], a = Math.atan2(sy, sx);
+            X.lineCap = "round";
+            X.lineWidth = 5;
+            X.strokeStyle = br.c + "33";
+            X.beginPath();
+            X.arc(0, 0, 51, a - 0.62, a + 0.62);
+            X.stroke();
+            if (fr[b] > 0) {
+              X.strokeStyle = br.c;
+              X.shadowColor = br.c;
+              X.shadowBlur = 8;
+              X.beginPath();
+              X.arc(0, 0, 51, a - 0.62, a - 0.62 + 1.24 * fr[b]);
+              X.stroke();
+              X.shadowBlur = 0;
+            }
+          });
+          const hg = X.createRadialGradient(0, 0, 4, 0, 0, 44);
+          hg.addColorStop(0, "rgba(255,217,138," + (0.22 + (calm ? 0 : 0.08 * Math.sin(tt * 2)) + 0.2 * (tot / totMax)) + ")");
+          hg.addColorStop(1, "rgba(8,12,17,.96)");
+          X.fillStyle = hg;
+          X.beginPath();
+          X.arc(0, 0, 43, 0, 6.283);
+          X.fill();
+          X.strokeStyle = "rgba(255,217,138,.6)";
+          X.lineWidth = 1.6;
+          X.stroke();
+          X.restore();
+          txt("◆ " + meta.f, 480, 302, 17, "#ffd98a", "center", "800", 78);
+          txt("FRAGMENTOS", 480, 319, 7.5, "#a39a7e", "center", "700");
+        }
+        // etiquetas de rama
+        SK_BR.forEach((br, b) => {
+          const end = skillPos(b, 5), own = br.nodes.filter((nd) => skillLv(nd.id) > 0).length, below = SK_SIGN[b][1] > 0;
+          txt(br.n + " · " + own + "/6", end.x, below ? end.y + 46 : end.y - 38, 11, br.c, "center", "800");
+        });
+        // tarjeta flotante del nodo
+        if (hov) {
+          const p = skillPos(hov.b, hov.i), cxl = clamp(p.x, 118, 842), top = SK_SIGN[hov.b][1] > 0 ? p.y - 54 : p.y + 36;
+          X.fillStyle = "rgba(6,10,15,.94)";
+          rrPath(cxl - 70, top, 140, 20, 8);
+          X.fill();
+          X.strokeStyle = SK_BR[hov.b].c;
+          X.lineWidth = 1;
+          X.stroke();
+          txt(hov.nd.n, cxl, top + 14, 10.5, "#eef4f6", "center", "700", 130);
+        }
+        X.restore();
+        // cabecera
+        txt("ÁRBOL DE HABILIDADES", 480, 62, 18, "#e8eef0", "center", "800");
+        const [own, all] = skillsOwned();
+        txt(own + " / " + all + " nodos  ·  mejoras permanentes para cada run" + (meta.last ? "  ·  +" + meta.last + " en la última" : ""), 480, 80, 10, "#8493a0", "center", "500");
+        // panel de detalle
+        drawPanel(240, 490, 480, 60, "rgba(172,190,206,.16)", "rgba(255,255,255,.025)");
+        if (hov) {
+          const { nd, lv, unl, maxed, cost, can, b } = hov;
+          txt(nd.n.toUpperCase(), 258, 509, 12, SK_BR[b].c, "left", "800", 300);
+          txt("NIVEL " + lv + " / " + nd.max, 702, 509, 9.5, "#9aa8ae", "right", "700");
+          txt(nd.d, 258, 526, 10.5, "#c4d0d4", "left", "500", 444);
+          txt(
+            maxed ? "Nivel máximo alcanzado" : !unl ? "Requiere el nodo anterior de esta rama" : can ? "Clic o ENTER para mejorar · ◆ " + cost : "Te faltan " + (cost - meta.f) + " fragmentos",
+            258, 541, 9, maxed ? "#ffe28a" : can ? "#7fe3b0" : "#9a8c70", "left", "700", 444,
+          );
+        } else {
+          txt("Pasa el ratón por un nodo para ver el detalle", 258, 512, 11, "#9aa8ae", "left", "600");
+          txt("Cada nodo exige el anterior · los fragmentos se ganan al terminar una run", 258, 532, 10, "#74838b", "left", "500", 444);
+        }
+        drawButton(60, 38, 122, 28, "VOLVER", "ESC");
+        drawButton(758, 38, 142, 28, respecArmed ? "¿SEGURO? +" + skillsSpent() : "REEMBOLSAR", "", respecArmed);
       }
       function drawMenu() {
         const pulseUI = uiPrefs.reducedMotion ? 0 : Math.sin(performance.now() * 0.001) * 0.025;
         X.fillStyle = "rgba(4,8,13,.65)";
         X.fillRect(0, 0, W, H);
-        drawPanel(56, 68, 848, 464, "rgba(" + ACC + ",.2)", "rgba(7,12,17,.72)");
+        drawPanel(56, 60, 848, 480, "rgba(" + ACC + ",.2)", "rgba(7,12,17,.72)");
         X.fillStyle = ACH;
         X.fillRect(88, 112, 3, 88);
         txt("TETHER", 112, 150, 60, "#e9f0f2", "left", "800");
         txt("SISTEMA DE SUPERVIVENCIA INERCIAL", 115, 180, 12, "#82a6a7", "left", "700");
         txt("Guía la masa. Lee el movimiento. Mantén el vínculo.", 115, 215, 15, "#a5b1b8", "left", "500");
         txt("Una arena viva, una cadena, una salida.", 115, 238, 12, "#6f7d87", "left", "500");
-        drawButton(110, 350, 205, 48, "INICIAR", "ENTER", true);
-        drawButton(330, 350, 205, 48, "RETO DIARIO", "D · " + dailySeed);
-        drawButton(110, 410, 205, 48, "AJUSTES", "O");
-        drawButton(330, 410, 205, 48, "MULTIJUGADOR", "ONLINE");
-        drawButton(220, 462, 205, 44, "ALMANAQUE", "BESTIARIO");
+        drawButton(110, 326, 205, 46, "INICIAR", "ENTER", true);
+        drawButton(330, 326, 205, 46, "RETO DIARIO", "D · " + dailySeed);
+        drawButton(110, 382, 205, 46, "HABILIDADES", "◆ " + meta.f + " · H");
+        drawButton(330, 382, 205, 46, "MULTIJUGADOR", "ONLINE");
+        drawButton(110, 438, 205, 46, "AJUSTES", "O");
+        drawButton(330, 438, 205, 46, "ALMANAQUE", "BESTIARIO");
         drawPanel(574, 113, 278, 240, "rgba(172,190,206,.12)", "rgba(255,255,255,.018)");
         txt("REGISTRO DE PILOTO", 596, 143, 11, "#93a3ad", "left", "700");
         txt("MEJOR RUN", 596, 185, 11, "#71808a", "left", "600");
@@ -6904,7 +8298,7 @@
         txt("MANDO", 596, 290, 10, "#71808a", "left", "700");
         txt("WASD mover  ·  Ratón dirigir", 596, 313, 12, "#acb8be", "left");
         txt("ESPACIO dash  ·  Q pulso  ·  J actividad", 596, 333, 11, "#acb8be", "left");
-        txt("ESC pausa  ·  F3 director  ·  ↑↓←→ + ENTER navegar", 115, 520, 10, "#71808a", "left", "500");
+        txt("ESC pausa  ·  F3 director  ·  ↑↓←→ + ENTER navegar", 115, 514, 10, "#71808a", "left", "500");
         X.globalAlpha = 0.4 + pulseUI;
         X.strokeStyle = ACH;
         X.lineWidth = 1;
@@ -6920,7 +8314,7 @@
       function drawDaily() {
         X.fillStyle = "rgba(4,8,13,.88)";
         X.fillRect(0, 0, W, H);
-        drawPanel(220, 116, 520, 368, "rgba(" + ACC + ",.24)", "rgba(8,13,18,.96)");
+        drawPanel(220, 108, 520, 412, "rgba(" + ACC + ",.24)", "rgba(8,13,18,.96)");
         txt("MODO DE JUEGO", 260, 157, 10, "#78918f", "left", "700");
         txt("RETO DIARIO", 260, 201, 30, "#e8eef0", "left", "800");
         txt("Una semilla compartida para todos los pilotos.", 260, 230, 13, "#a3afb4", "left", "500");
@@ -6933,8 +8327,8 @@
         txt(String(dailySeed), 260, 326, 23, "#b6d8d2", "left", "700");
         txt("La presión aumenta con el tiempo. Cada intento", 260, 357, 12, "#9ba8ad", "left", "500");
         txt("usa el mismo mundo y la misma progresión.", 260, 377, 12, "#9ba8ad", "left", "500");
-        drawButton(356, 401, 248, 46, "INICIAR RETO", "ENTER", true);
-        drawButton(356, 454, 248, 30, "VOLVER", "ESC");
+        drawButton(356, 410, 248, 46, "INICIAR RETO", "ENTER", true);
+        drawButton(356, 464, 248, 34, "VOLVER", "ESC");
       }
       function almanacCardBounds(i) {
         return { x: 62 + (i % 4) * 211, y: 127 + Math.floor(i / 4) * 54, w: 198, h: 49 };
@@ -7577,7 +8971,7 @@
       function drawSettings() {
         X.fillStyle = P ? "rgba(4,8,13,.78)" : "rgba(4,8,13,.88)";
         X.fillRect(0, 0, W, H);
-        drawPanel(145, 38, 670, 524, "rgba(" + ACC + ",.24)", "rgba(8,13,18,.96)");
+        drawPanel(145, 28, 670, 544, "rgba(" + ACC + ",.24)", "rgba(8,13,18,.96)");
         txt("CONFIGURACIÓN", 185, 81, 24, "#e8eef0", "left", "800");
         txt("Ajusta la lectura visual, el movimiento y los efectos.", 185, 105, 11, "#7f9099", "left", "500");
         drawButton(185, 126, 284, 34, "BÁSICA", "1", settingsPage == "basic");
@@ -7597,11 +8991,11 @@
           ];
           rows.forEach((r, i) => {
             const y = 174 + i * 56;
-            drawButton(185, y, 590, 46, r[0], r[3] || (r[2] ? "ACTIVO" : "DESACTIVADO"), r[2]);
+            drawButton(185, y, 590, 46, r[0], r[3] || (r[2] ? "ACTIVO" : "DESACTIVADO"), r[2], true);
             txt(r[1], 205, y + 37, 10, "#85949c", "left", "500");
           });
-          txt("WASD mover · Ratón dirigir · ESPACIO dash · Q pulso", 185, 474, 11, "#9aa8ae", "left", "500");
-          txt("J actividad · ESC vuelve · M sonido · ↑↓←→ + ENTER navegar", 185, 494, 11, "#73818a", "left", "500");
+          txt("WASD mover · Ratón dirigir · ESPACIO dash · Q pulso", 185, 468, 11, "#9aa8ae", "left", "500");
+          txt("J actividad · ESC vuelve · M sonido · ↑↓←→ + ENTER navegar", 185, 488, 11, "#73818a", "left", "500");
         } else {
           const shake = uiPrefs.cameraShake ?? 1,
             particles = uiPrefs.particleScale ?? 1,
@@ -7641,7 +9035,7 @@
             ];
           rows.forEach((r, i) => {
             const y = 162 + i * 40;
-            drawButton(185, y, 590, 36, r[0], r[2]);
+            drawButton(185, y, 590, 36, r[0], r[2], false, true);
             txt(r[1], 205, y + 30, 9, "#85949c", "left", "500");
           });
           drawButton(
@@ -7654,7 +9048,7 @@
             resetArmed,
           );
         }
-        drawButton(350, 505, 260, 38, settingsFrom == "pause" ? "VOLVER A PAUSA" : "VOLVER", "ESC");
+        drawButton(350, 508, 260, 38, settingsFrom == "pause" ? "VOLVER A PAUSA" : "VOLVER", "ESC");
       }
       function drawAimGuide() {
         if (!P || !S || P.dead || !(st === "play" || (st === "online" && net.gameState === "play"))) return;
@@ -7832,7 +9226,7 @@
         const w = 440,
           h = 56,
           x = (W - w) / 2,
-          y = H - 96;
+          y = H - 118;
         drawPanel(x, y, w, h, "rgba(" + ACC + ",.55)", "rgba(7,13,19,.9)");
         txt(s.title, x + 18, y + 23, 12, "#e9f3f3", "left", "800");
         txt(s.text, x + 18, y + 43, 10, "#a5bbc0", "left", "500", w - 36);
@@ -7919,6 +9313,7 @@
       function navActive() {
         return (
           st === "menu" ||
+          st === "skills" ||
           st === "daily" ||
           st === "onlineLobby" ||
           st === "settings" ||
@@ -8049,6 +9444,548 @@
 /* ============================================================
    ESTILO SALCHICHA: jugador, ojos, suelo y manchas
    ============================================================ */
+
+      /* ============================================================
+         PERKS ADAPTADOS (inspirados en Sausage Survivors 2)
+         ============================================================ */
+      const mines = [], shells = [];
+      let orbA = 0;
+      function dotDamage(e, dmg, owner = P) {
+        if (!e || e.dead || e.w > 0 || e.phased || dmg <= 0) return;
+        e.hpBar = e.hpBar ?? e.hp;
+        e.hp -= dmg;
+        e.hurtT = 0.2;
+        e.fl = Math.max(e.fl || 0, 0.08);
+        if (dmg >= 6) pops.push({ x: e.x + R(-8, 8), y: e.y - e.r, t: Math.round(dmg) + "", l: 0.5, c: "#9fe7ff" });
+        runStats.dealt += dmg;
+        director.damageDealtWindow = (director.damageDealtWindow || 0) + dmg;
+        if (e.hp <= 0) {
+          e.hp = 0;
+          kill(e, null, owner);
+        }
+      }
+      function nearbyEnemies(x, y, r) {
+        return enemies.filter((e) => !e.dead && !(e.w > 0) && Math.hypot(e.x - x, e.y - y) < r + e.r);
+      }
+      function impactMulOf(owner, e, ux, uy, crit) {
+        let m = 1;
+        const spd = Math.hypot(owner.vx || 0, owner.vy || 0),
+          hpR = owner.hp / Math.max(1, owner.mhp);
+        if (owner.tbFreeze > 0) m *= 1.8;
+        if (S.finalFury && hpR <= 0.2) m *= 1 + 0.35 * S.finalFury;
+        if (S.perfectionist && hpR >= 0.98) m *= 1 + 0.2 * S.perfectionist;
+        if (S.digIn && spd < 45) m *= 1 + 0.25 * S.digIn;
+        if (S.backstab && Math.cos(e.ang || 0) * ux + Math.sin(e.ang || 0) * uy > 0.35) m *= 1 + 0.4 * S.backstab;
+        if (S.bloodlust && runTime < (owner.bloodT || 0)) m *= 1 + 0.02 * S.bloodlust * (owner.bloodN || 0);
+        if (S.focus) {
+          if (owner.focusId === e.id) owner.focusN = Math.min(5, (owner.focusN || 0) + 1);
+          else {
+            owner.focusId = e.id;
+            owner.focusN = 0;
+          }
+          m *= 1 + 0.06 * S.focus * owner.focusN;
+        }
+        if (S.pain && runTime < (owner.painT || 0)) m *= 1 + 0.3 * S.pain;
+        if (S.pumped && runTime >= (owner.pumpAt || 0)) {
+          owner.pumpAt = runTime + Math.max(2.5, 5.5 - 0.8 * S.pumped);
+          m *= 1.8 + 0.4 * S.pumped;
+          rings.push({ x: owner.x, y: owner.y, r: 8, l: 0.3, c: "#ffe28a", g: 200 });
+        }
+        if (S.critStreak) {
+          m *= 1 + 0.12 * S.critStreak * Math.min(5, owner.critN || 0);
+          owner.critN = crit ? (owner.critN || 0) + 1 : 0;
+        }
+        if (S.gambler) m *= 0.5 + rnd() * 1.5;
+        if (S.patient) m *= 1 + Math.min(1, 0.04 * S.patient * Math.max(0, runTime - (owner.lastKillAt || 0)));
+        if (S.bloodPact) m *= 1.28;
+        return m;
+      }
+      function tryDodge(owner) {
+        if (S.freeDodge > 0) {
+          S.freeDodge--;
+          return true;
+        }
+        if (S.anticipate && runTime >= (owner.antiAt || 0)) {
+          owner.antiAt = runTime + Math.max(8, 15 - 2 * S.anticipate);
+          return true;
+        }
+        const hpR = owner.hp / Math.max(1, owner.mhp),
+          c = 0.04 * S.dodge + 0.12 * S.slippery * (1 - hpR);
+        return c > 0 && rnd() < c;
+      }
+      function pandora() {
+        const r = Math.floor(rnd() * 5);
+        if (r === 0) P.hp = Math.min(P.mhp, P.hp + P.mhp * 0.08);
+        else if (r === 1) {
+          rings.push({ x: P.x, y: P.y, r: 10, l: 0.4, c: "#c39bff", g: 420 });
+          for (const e of nearbyEnemies(P.x, P.y, 160)) dotDamage(e, 22 * S.dmg, P);
+        } else if (r === 2) P.ult = Math.min(100, P.ult + ultGain(P, 14));
+        else if (r === 3) P.shield = 1;
+        else P.inv = Math.max(P.inv, 1);
+        spark(P.x, P.y, "#c39bff", 14);
+        rings.push({ x: P.x, y: P.y, r: 8, l: 0.35, c: "#c39bff", g: 200 });
+      }
+
+      /* ---- legendarias / míticas, maldiciones y re-roll ---- */
+      const wells = [];
+      let rerollsThis = 0, nextCurse = null, curseFlash = null;
+      const CURSES = [
+        { id: "aim", n: "Giro cautivo", d: "La masa solo puede girar en un sentido", ap: () => { S.curseAim = Math.random() < 0.5 ? 1 : -1; P.cAim = undefined; }, ok: () => !S.curseAim },
+        { id: "ult", n: "Pulso mudo", d: "Tu próxima carga completa de pulso se anula", ap: () => (S.curseUltLock = (S.curseUltLock || 0) + 1), ok: () => !S.curseUltLock },
+        { id: "dash", n: "Dash pesado", d: "+5 s de enfriamiento del dash", ap: () => { S.curseDash = 1; P.dcd += 5; }, ok: () => !S.curseDash },
+        { id: "brit", n: "Fragilidad", d: "+25% de daño recibido (acumulable)", ap: () => (S.curseBrittle = (S.curseBrittle || 0) + 1), ok: () => (S.curseBrittle || 0) < 4 },
+        { id: "soft", n: "Cadena blanda", d: "La masa responde un 30% más lenta", ap: () => { S.curseSoft = 1; S.k *= 0.7; }, ok: () => !S.curseSoft },
+        { id: "short", n: "Eslabón corto", d: "-20% de alcance de cadena", ap: () => { S.curseShort = 1; S.L *= 0.8; }, ok: () => !S.curseShort },
+        { id: "leg", n: "Piernas pesadas", d: "-10% de velocidad de movimiento", ap: () => { S.curseLeg = 1; P.spd *= 0.9; }, ok: () => !S.curseLeg },
+      ];
+      function canReroll() {
+        return st === "pick" && !serverCoop?.enabled && ((S.freeRerolls || 0) > 0 || (rerollsThis < 3 && CURSES.some((c) => c.ok())));
+      }
+      function peekCurse() {
+        if (!nextCurse || !nextCurse.ok()) {
+          const pool = CURSES.filter((c) => c.ok());
+          nextCurse = pool[Math.floor(Math.random() * pool.length)] || null;
+        }
+        return nextCurse;
+      }
+      function rerollOffer() {
+        if (!canReroll() || pickT < 0.3) return false;
+        if ((S.freeRerolls || 0) > 0) {
+          S.freeRerolls--;
+          curseFlash = { n: "Re-roll limpio", d: "sin maldición", good: true, until: performance.now() + 2200 };
+          snd(520, 0.2, "triangle", 0.1, 1.5);
+        } else {
+          const c = peekCurse();
+          if (!c) return false;
+          c.ap();
+          S.curses.push({ id: c.id, n: c.n, d: c.d });
+          nextCurse = null;
+          rerollsThis++;
+          curseFlash = { n: c.n, d: c.d, until: performance.now() + 2800 };
+          shk += 5;
+          snd(110, 0.35, "sawtooth", 0.14, 0.5);
+          uiSparks.push({ ring: 1, x: W / 2, y: 496, r: 6, l: 0.5, m: 0.5, c: "#ff3a4f", g: 560 });
+        }
+        offer = makeOffer(offer.map((u) => u.n));
+        pickT = 0;
+        return true;
+      }
+      function curseAimAngle(a) {
+        if (!S.curseAim) return a;
+        if (P.cAim === undefined) P.cAim = a;
+        const d = Math.atan2(Math.sin(a - P.cAim), Math.cos(a - P.cAim));
+        if (d * S.curseAim >= 0) P.cAim += d;
+        return P.cAim;
+      }
+      function updateLegendaryPerks(dt) {
+        if (S.singularity) {
+          P.singT = (P.singT || 0) + dt;
+          if (P.singT >= 9 && enemies.some((e) => !e.dead && !(e.w > 0))) {
+            P.singT = 0;
+            const m = Wt[0] || P;
+            wells.push({ x: m.x, y: m.y, t: 3, m: 3, tick: 0 });
+            snd(120, 0.5, "sine", 0.14, 2);
+          }
+        }
+        for (let i = wells.length - 1; i >= 0; i--) {
+          const w = wells[i];
+          w.t -= dt;
+          w.tick -= dt;
+          for (const e of enemies) {
+            if (e.dead || e.w > 0) continue;
+            const dx = w.x - e.x, dy = w.y - e.y, d = Math.hypot(dx, dy) || 1;
+            if (d < 280) {
+              const f = (isBossType(e.t) ? 240 : 900) * dt * (1 - d / 320);
+              e.kx = (e.kx || 0) + (dx / d) * f;
+              e.ky = (e.ky || 0) + (dy / d) * f;
+            }
+          }
+          if (w.tick <= 0) {
+            w.tick = 0.25;
+            for (const e of nearbyEnemies(w.x, w.y, 150)) dotDamage(e, 5.5 * S.dmg, P);
+          }
+          if (w.t <= 0) {
+            rings.push({ x: w.x, y: w.y, r: 10, l: 0.45, c: "#c39bff", g: 560 }, { x: w.x, y: w.y, r: 6, l: 0.3, c: "#fff", g: 420 });
+            for (const e of nearbyEnemies(w.x, w.y, 200)) {
+              zap(w.x, w.y, e.x, e.y, "#c39bff", 3, 10, 0.3);
+              dotDamage(e, 70 * S.dmg, P);
+            }
+            spark(w.x, w.y, "#c39bff", 30);
+            shk += 7;
+            snd(70, 0.4, "sawtooth", 0.16, 3);
+            wells.splice(i, 1);
+          }
+        }
+        if (S.timeBreak) {
+          if (P.tbFreeze > 0) {
+            P.tbFreeze -= dt;
+            bullets.length = 0;
+            if (P.tbFreeze <= 0) rings.push({ x: P.x, y: P.y, r: 10, l: 0.5, c: "#bfe6ff", g: 700 });
+          } else {
+            P.tbT = (P.tbT || 0) + dt;
+            if (P.tbT >= 24 && enemies.some((e) => !e.dead && !(e.w > 0))) {
+              P.tbT = 0;
+              P.tbFreeze = 3.5;
+              bullets.length = 0;
+              shk += 8;
+              rings.push({ x: P.x, y: P.y, r: 10, l: 0.6, c: "#bfe6ff", g: 900 });
+              snd(180, 0.6, "sine", 0.16, 0.4);
+            }
+          }
+        }
+        if (S.curseUltLock > 0 && P.ult >= 100) {
+          P.ult = 0;
+          S.curseUltLock--;
+          pops.push({ x: P.x, y: P.y - 30, t: "PULSO ANULADO", l: 1.2, c: "#ff6b81" });
+          rings.push({ x: P.x, y: P.y, r: 8, l: 0.4, c: "#555a66", g: 200 });
+          snd(100, 0.3, "square", 0.1, 0.5);
+        }
+      }
+      function drawLegendaryFX() {
+        for (const w of wells) {
+          const k = 1 - w.t / w.m, tt = performance.now() * 0.001;
+          X.save();
+          X.globalCompositeOperation = "lighter";
+          const g = X.createRadialGradient(w.x, w.y, 4, w.x, w.y, 170);
+          g.addColorStop(0, "rgba(195,155,255," + (0.5 - 0.1 * k) + ")");
+          g.addColorStop(0.35, "rgba(120,70,220,.22)");
+          g.addColorStop(1, "rgba(80,40,180,0)");
+          X.fillStyle = g;
+          X.beginPath();
+          X.arc(w.x, w.y, 170, 0, 6.283);
+          X.fill();
+          for (let j = 0; j < 3; j++) {
+            const rr = 150 - ((tt * 70 + j * 50) % 150);
+            X.globalAlpha = Math.min(1, rr / 100) * 0.6;
+            X.strokeStyle = "#d9c2ff";
+            X.lineWidth = 1.6;
+            X.beginPath();
+            X.arc(w.x, w.y, rr, 0, 6.283);
+            X.stroke();
+          }
+          X.globalAlpha = 1;
+          X.fillStyle = "#05030c";
+          X.beginPath();
+          X.arc(w.x, w.y, 14 + 4 * Math.sin(tt * 9), 0, 6.283);
+          X.fill();
+          X.restore();
+        }
+        if (S.curseAim) {
+          const a0 = P.cAim ?? 0, dir = S.curseAim;
+          X.save();
+          X.strokeStyle = "rgba(255,77,109,.55)";
+          X.fillStyle = "rgba(255,77,109,.7)";
+          X.lineWidth = 2;
+          X.beginPath();
+          X.arc(P.x, P.y, 40, a0, a0 + dir * 0.9, dir < 0);
+          X.stroke();
+          const ea = a0 + dir * 0.9, ex = P.x + Math.cos(ea) * 40, ey = P.y + Math.sin(ea) * 40, ta = ea + dir * 1.57;
+          X.beginPath();
+          X.moveTo(ex + Math.cos(ta) * 7, ey + Math.sin(ta) * 7);
+          X.lineTo(ex + Math.cos(ea) * 5, ey + Math.sin(ea) * 5);
+          X.lineTo(ex - Math.cos(ea) * 5, ey - Math.sin(ea) * 5);
+          X.fill();
+          X.restore();
+        }
+      }
+      function drawLegendaryOverlay() {
+        if (st !== "play" || !P || !S || !(P.tbFreeze > 0)) return;
+        const a = Math.min(1, P.tbFreeze / 0.4, (3.5 - P.tbFreeze) / 0.2 + 0.2);
+        X.save();
+        X.setTransform(C.width / W, 0, 0, C.height / H, 0, 0);
+        X.fillStyle = "rgba(140,205,255," + 0.1 * a + ")";
+        X.fillRect(0, 0, W, H);
+        const g = X.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.85);
+        g.addColorStop(0, "rgba(120,190,255,0)");
+        g.addColorStop(1, "rgba(120,190,255," + 0.3 * a + ")");
+        X.fillStyle = g;
+        X.fillRect(0, 0, W, H);
+        X.globalAlpha = a;
+        txt("TIEMPO DETENIDO · " + P.tbFreeze.toFixed(1), W / 2, 96, 11, "#cfeaff", "center", "800");
+        X.restore();
+      }
+      function runPerkTick(dt) {
+        if (!P || P.dead || !S) return;
+        updateLegendaryPerks(dt);
+        const spd = Math.hypot(P.vx || 0, P.vy || 0), still = spd < 45;
+        P.stillT = still ? (P.stillT || 0) + dt : 0;
+        if (S.selfHeal && P.hp < P.mhp) P.hp = Math.min(P.mhp, P.hp + 0.35 * S.selfHeal * dt);
+        if (S.metaRegen && P.hp < P.mhp) P.hp = Math.min(P.mhp, P.hp + S.metaRegen * dt);
+        if (S.ivDrip) {
+          P.ivT = (P.ivT || 0) + dt;
+          if (P.ivT >= 3) {
+            P.ivT = 0;
+            const before = P.hp;
+            P.hp = Math.min(P.mhp, P.hp + (P.mhp - P.hp) * 0.05 * S.ivDrip);
+            healPop(P.hp - before);
+          }
+        }
+        if (S.recuperate && runTime - (P.lastKillAt || 0) > 6 && runTime >= (P.recAt || 0)) {
+          P.recAt = runTime + 6;
+          P.hp = Math.min(P.mhp, P.hp + 5 * S.recuperate);
+          spark(P.x, P.y, "#83ffd0", 6);
+          healPop(5 * S.recuperate);
+        }
+        if (S.pauseHeal && P.stillT > 2 && P.hp < P.mhp && runTime >= (P.pauseAt || 0)) {
+          P.pauseAt = runTime + Math.max(30, 70 - 10 * S.pauseHeal);
+          P.hp = Math.min(P.mhp, P.hp + P.mhp * 0.1 * S.pauseHeal);
+          rings.push({ x: P.x, y: P.y, r: 8, l: 0.5, c: "#83ffd0", g: 140 });
+          healPop(P.mhp * 0.1 * S.pauseHeal);
+        }
+        if (S.frostNova && P.stillT > 1 && runTime >= (P.novaAt || 0)) {
+          P.novaAt = runTime + Math.max(10, 24 - 4 * S.frostNova);
+          rings.push({ x: P.x, y: P.y, r: 10, l: 0.5, c: "#9ee7ff", g: 440 });
+          for (const e of nearbyEnemies(P.x, P.y, 220)) {
+            spark(e.x, e.y, "#9ee7ff", 6);
+            zap(P.x, P.y, e.x, e.y, "#9ee7ff", 1.8, 5, 0.25);
+            e.jam = Math.max(e.jam || 0, 2.4);
+            e.staggerT = Math.max(e.staggerT || 0, 0.6);
+          }
+        }
+        if (S.bloodPact && P.hp > 1) P.hp = Math.max(1, P.hp - 0.6 * dt);
+        if (S.warm) {
+          P.warmT = (P.warmT || 0) + dt;
+          if (P.warmT >= 1.8 / (1 + 0.3 * (S.warm - 1)) && (P.warmN || 0) < 20) {
+            P.warmT = 0;
+            P.warmN = (P.warmN || 0) + 1;
+            P.spd *= 1.012;
+          }
+        }
+        if (S.rechShield && !(P.shield > 0)) {
+          P.shT = (P.shT || 0) + dt;
+          if (P.shT >= Math.max(8, 30 - 5 * S.rechShield)) {
+            P.shT = 0;
+            P.shield = 1;
+            rings.push({ x: P.x, y: P.y, r: 8, l: 0.4, c: "#8ecaff", g: 150 });
+          }
+        } else P.shT = 0;
+        if (S.radiation) {
+          P.radT = (P.radT || 0) - dt;
+          if (P.radT <= 0) {
+            P.radT = 1.1;
+            rings.push({ x: P.x, y: P.y, r: 10, l: 0.35, c: "#b6f542", g: 330 });
+            for (const e of nearbyEnemies(P.x, P.y, 115)) {
+              spark(e.x, e.y, "#b6f542", 3);
+              dotDamage(e, 3 * S.radiation * S.dmg, P);
+            }
+            if (rnd() < 0.14) {
+              P.hp = Math.max(1, P.hp - 2);
+              spark(P.x, P.y, "#b6f542", 6);
+            }
+          }
+        }
+        if (S.storm) {
+          P.stormT = (P.stormT || 0) - dt;
+          if (P.stormT <= 0) {
+            P.stormT = Math.max(1.6, 4.2 - 0.5 * S.storm);
+            const pool = nearbyEnemies(P.x, P.y, 480);
+            for (let i = 0; i < 1 + S.storm && pool.length; i++) {
+              const e = pool.splice(Math.floor(rnd() * pool.length), 1)[0];
+              dotDamage(e, (12 + 8 * S.storm) * S.dmg, P);
+              spark(e.x, e.y, "#fff06a", 12);
+              zap(e.x + R(-50, 50), e.y - 340, e.x, e.y, "#fff06a", 4, 22, 0.3);
+              zap(e.x + R(-30, 30), e.y - 160, e.x + R(-60, 60), e.y + R(-30, 30), "#ffe28a", 2, 12, 0.22);
+              rings.push({ x: e.x, y: e.y, r: 6, l: 0.3, c: "#fff06a", g: 200 });
+              decals.push({ x: e.x, y: e.y, r: 14, rot: rnd() * 6, c: "rgba(40,30,10,.35)" });
+              shk += 1.5;
+            }
+          }
+        }
+        if (S.artillery) {
+          P.artT = (P.artT || 0) - dt;
+          if (P.artT <= 0) {
+            P.artT = Math.max(1.2, 2.9 - 0.4 * S.artillery);
+            const pool = nearbyEnemies(P.x, P.y, 520);
+            if (pool.length && shells.length < 6) {
+              const e = pool[Math.floor(rnd() * pool.length)];
+              shells.push({ x: e.x + R(-30, 30), y: e.y + R(-30, 30), t: 0.7, m: 0.7, lvl: S.artillery });
+            }
+          }
+        }
+        for (let i = shells.length - 1; i >= 0; i--) {
+          const q = shells[i];
+          q.t -= dt;
+          if (q.t > 0) continue;
+          shells.splice(i, 1);
+          rings.push({ x: q.x, y: q.y, r: 10, l: 0.35, c: "#ffd166", g: 260 });
+          spark(q.x, q.y, "#ffb703", 14);
+          shk += 2;
+          for (const e of nearbyEnemies(q.x, q.y, 70)) dotDamage(e, (18 + 10 * q.lvl) * S.dmg, P);
+        }
+        for (let i = mines.length - 1; i >= 0; i--) {
+          const m = mines[i];
+          m.t += dt;
+          if (m.t < 0.5) continue;
+          const hitters = nearbyEnemies(m.x, m.y, 16);
+          if (!hitters.length) continue;
+          mines.splice(i, 1);
+          rings.push({ x: m.x, y: m.y, r: 8, l: 0.35, c: "#ff9f1c", g: 240 });
+          spark(m.x, m.y, "#ffb703", 12);
+          for (const e of nearbyEnemies(m.x, m.y, 70)) dotDamage(e, (14 + 6 * m.lvl) * S.dmg, P);
+        }
+        for (const q of S.delayQ || []) {
+          if (runTime >= q.t && !q.done) {
+            q.done = 1;
+            P.hp = Math.min(P.mhp, P.hp + q.v);
+            healPop(q.v);
+            spark(P.x, P.y, "#83ffd0", 5);
+          }
+        }
+        if (S.delayQ && S.delayQ.length > 24) S.delayQ = S.delayQ.filter((q) => !q.done);
+        if (S.saw || S.barrier) {
+          orbA += dt * 3.4;
+          const sawN = S.saw || 0, barN = S.barrier || 0;
+          for (const e of enemies) e.sawT = (e.sawT || 0) - dt;
+          for (let i = 0; i < sawN; i++) {
+            const a = orbA + (i * 6.283) / sawN, bx = P.x + Math.cos(a) * 50, by = P.y + Math.sin(a) * 50;
+            for (const e of nearbyEnemies(bx, by, 10)) {
+              if (e.sawT > 0) continue;
+              e.sawT = 0.32;
+              dotDamage(e, 3.2 * S.dmg, P);
+              spark(e.x, e.y, "#dfe8ec", 3);
+            }
+          }
+          for (let i = 0; i < barN; i++) {
+            const a = -orbA * 0.8 + (i * 6.283) / barN, bx = P.x + Math.cos(a) * 62, by = P.y + Math.sin(a) * 62;
+            for (let j = bullets.length - 1; j >= 0; j--) {
+              const b = bullets[j];
+              if (Math.hypot(b.x - bx, b.y - by) < 16) {
+                spark(b.x, b.y, "#8ecaff", 5);
+                healOnIntercept(P, b.x, b.y);
+                bullets.splice(j, 1);
+              }
+            }
+          }
+        }
+      }
+
+      /* ---- rayos y efectos visuales de los perks ---- */
+      const zaps = [];
+      let zapLast = performance.now();
+      function zap(x1, y1, x2, y2, c = "#fff06a", w = 2, jag = 10, life = 0.22) {
+        if (uiPrefs.reducedMotion && zaps.length > 6) return;
+        const pts = [{ x: x1, y: y1 }], n = 7, dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len;
+        for (let i = 1; i < n; i++) {
+          const o = (Math.random() - 0.5) * 2 * jag;
+          pts.push({ x: x1 + (dx * i) / n + nx * o, y: y1 + (dy * i) / n + ny * o });
+        }
+        pts.push({ x: x2, y: y2 });
+        if (zaps.length > 60) zaps.shift();
+        zaps.push({ pts, c, w, l: life, m: life });
+      }
+      function healPop(n, c = "#83ffd0") {
+        if (n >= 0.5 && P) pops.push({ x: P.x + R(-10, 10), y: P.y - 26, t: "+" + Math.round(n), l: 0.8, c });
+      }
+      function drawZaps() {
+        const now = performance.now(), dt = Math.min(0.05, (now - zapLast) / 1000);
+        zapLast = now;
+        if (!zaps.length) return;
+        X.save();
+        X.globalCompositeOperation = "lighter";
+        X.lineJoin = "round";
+        X.lineCap = "round";
+        for (let i = zaps.length - 1; i >= 0; i--) {
+          const q = zaps[i];
+          if (st === "play") q.l -= dt;
+          if (q.l <= 0) {
+            zaps.splice(i, 1);
+            continue;
+          }
+          const a = Math.min(1, (q.l / q.m) * 1.4);
+          for (const pass of [0, 1]) {
+            X.globalAlpha = pass ? a : a * 0.35;
+            X.strokeStyle = pass ? "#ffffff" : q.c;
+            X.lineWidth = pass ? Math.max(1, q.w * 0.55) : q.w * 3;
+            X.beginPath();
+            q.pts.forEach((p, k) => X[k ? "lineTo" : "moveTo"](p.x, p.y));
+            X.stroke();
+          }
+        }
+        X.restore();
+      }
+
+      function drawPerkFX() {
+        if (!P || P.dead || !S) return;
+        drawZaps();
+        drawLegendaryFX();
+        if (S.saw || S.barrier) {
+          X.strokeStyle = "rgba(223,232,236,.1)";
+          X.lineWidth = 1;
+          X.beginPath();
+          X.arc(P.x, P.y, 50, 0, 6.283);
+          X.stroke();
+          if (S.barrier) {
+            X.strokeStyle = "rgba(142,202,255,.1)";
+            X.beginPath();
+            X.arc(P.x, P.y, 62, 0, 6.283);
+            X.stroke();
+          }
+        }
+        for (const q of shells) {
+          const k = 1 - q.t / q.m;
+          if (q.t < 0.35) {
+            const fy = q.y - q.t * 900;
+            X.save();
+            X.globalCompositeOperation = "lighter";
+            X.strokeStyle = "rgba(255,200,90,.55)";
+            X.lineWidth = 3;
+            X.beginPath();
+            X.moveTo(q.x, fy - 40);
+            X.lineTo(q.x, fy);
+            X.stroke();
+            X.fillStyle = "#fff4c2";
+            X.beginPath();
+            X.arc(q.x, fy, 4, 0, 6.283);
+            X.fill();
+            X.restore();
+          }
+          X.strokeStyle = "rgba(255,214,102," + (0.35 + 0.5 * k) + ")";
+          X.lineWidth = 2;
+          X.setLineDash([6, 5]);
+          X.beginPath();
+          X.arc(q.x, q.y, 70, 0, 6.283);
+          X.stroke();
+          X.setLineDash([]);
+          X.fillStyle = "rgba(255,214,102," + (0.08 + 0.2 * k) + ")";
+          X.beginPath();
+          X.arc(q.x, q.y, 70 * k, 0, 6.283);
+          X.fill();
+        }
+        for (const m of mines) {
+          X.fillStyle = "#2b1410";
+          X.beginPath();
+          X.arc(m.x, m.y, 7, 0, 6.283);
+          X.fill();
+          X.fillStyle = m.t > 0.5 && Math.floor(runTime * 4) % 2 ? "#ff9f1c" : "#a35d12";
+          X.beginPath();
+          X.arc(m.x, m.y, 3.5, 0, 6.283);
+          X.fill();
+        }
+        const sawN = S.saw || 0, barN = S.barrier || 0;
+        for (let i = 0; i < sawN; i++) {
+          const a = orbA + (i * 6.283) / sawN, bx = P.x + Math.cos(a) * 50, by = P.y + Math.sin(a) * 50;
+          poly(bx, by, 11, 8, orbA * 3);
+          X.fillStyle = "#d9e2e6";
+          X.fill();
+          X.strokeStyle = "#2b1410";
+          X.lineWidth = 2.4;
+          X.stroke();
+          X.fillStyle = "#2b1410";
+          X.beginPath();
+          X.arc(bx, by, 3, 0, 6.283);
+          X.fill();
+        }
+        for (let i = 0; i < barN; i++) {
+          const a = -orbA * 0.8 + (i * 6.283) / barN;
+          X.strokeStyle = "rgba(142,202,255,.9)";
+          X.lineWidth = 5;
+          X.lineCap = "round";
+          X.beginPath();
+          X.arc(P.x, P.y, 62, a - 0.22, a + 0.22);
+          X.stroke();
+        }
+        X.lineCap = "butt";
+      }
       const dustSeed = Array.from({ length: 46 }, (_, i) => i);
       let ghosts = [], vigGrad = null;
       function drawDust() {
@@ -8091,12 +10028,7 @@
         X.fillRect(-20, -20, W + 40, H + 40);
       }
       function drawSausage(x, y, ang, white, noShadow) {
-        if (!noShadow) {
-          X.fillStyle = "rgba(0,0,0,.26)";
-          X.beginPath();
-          X.ellipse(x, y + 12, 15, 5.5, 0, 0, 6.283);
-          X.fill();
-        }
+
         const sp = P ? Math.hypot(P.vx || 0, P.vy || 0) : 0,
           str = 1 + Math.min(0.18, sp * 0.0003);
         X.save();
@@ -8312,6 +10244,123 @@
 /* ============================================================
    UI: paneles de build/estadísticas (pausa)
    ============================================================ */
+
+      /* ---- build de la run: rejilla con scroll, agrupada por rareza, con tooltip ---- */
+      let buildScroll = 0, buildScrollMax = 0;
+      function buildEntries() {
+        const m = new Map();
+        for (const n of (S && S.runPicks) || []) m.set(n, (m.get(n) || 0) + 1);
+        return [...m]
+          .map(([n, c]) => ({ n, c, u: U.find((q) => q.n === n) }))
+          .sort((a, b) => (b.u?.r || 0) - (a.u?.r || 0) || b.c - a.c)
+          .concat(((S && S.curses) || []).map((cu) => ({ n: cu.n, c: 1, curse: cu })));
+      }
+      function drawBuildGrid(x, y, w, h, cell, iconSize) {
+        const rows = buildEntries(),
+          cols = Math.max(1, Math.floor(w / cell)),
+          gx = x + (w - cols * cell) / 2,
+          content = Math.ceil(rows.length / cols) * cell;
+        buildScrollMax = Math.max(0, content - h);
+        buildScroll = clamp(buildScroll, 0, buildScrollMax);
+        if (!rows.length) {
+          txt("Aún sin mejoras. Sube de nivel para elegir.", x + 4, y + 18, 10, "#8da0a6", "left", "500", w - 8);
+          return;
+        }
+        X.save();
+        X.beginPath();
+        X.rect(x, y, w, h);
+        X.clip();
+        rows.forEach((r, i) => {
+          const cx = gx + (i % cols) * cell + cell / 2,
+            cy = y + Math.floor(i / cols) * cell + cell / 2 - buildScroll;
+          if (cy < y - cell || cy > y + h + cell) return;
+          const rar = r.u?.r || 0,
+            hov = inRect(mouse.x, mouse.y, cx - cell / 2, cy - cell / 2, cell, cell) && inRect(mouse.x, mouse.y, x, y, w, h);
+          if (hov) {
+            X.fillStyle = "rgba(255,255,255,.07)";
+            rrPath(cx - cell / 2 + 2, cy - cell / 2 + 2, cell - 4, cell - 4, 8);
+            X.fill();
+            const lvl = r.u ? S.upgradeCounts[r.u.key || r.u.n] || r.c : r.c;
+            if (r.curse) offerTooltip("MALDICIÓN · " + r.n, r.curse.d, "#ff3a4f", 6);
+            else offerTooltip(
+              r.n + " · nivel " + lvl,
+              (r.u?.d || "Mejora elegida en esta partida.") + (r.u ? "\n" + upgradeLevelEffect(r.u, lvl) : ""),
+              RAR_COL[rar],
+              6,
+            );
+          }
+          if (r.curse) {
+            const rr = iconSize * 0.5;
+            X.save();
+            X.fillStyle = "#14070d";
+            X.strokeStyle = "#ff3a4f";
+            X.lineWidth = 2;
+            X.shadowColor = "#ff3a4f";
+            X.shadowBlur = hov ? 12 : 5;
+            X.beginPath();
+            X.arc(cx, cy - 2, rr, 0, 6.283);
+            X.fill();
+            X.stroke();
+            X.shadowBlur = 0;
+            X.lineWidth = 2.4;
+            X.beginPath();
+            X.moveTo(cx - rr * 0.4, cy - 2 - rr * 0.4);
+            X.lineTo(cx + rr * 0.4, cy - 2 + rr * 0.4);
+            X.moveTo(cx + rr * 0.4, cy - 2 - rr * 0.4);
+            X.lineTo(cx - rr * 0.4, cy - 2 + rr * 0.4);
+            X.stroke();
+            X.restore();
+          } else drawIcon(r.u ? r.u.i : "mass", cx, cy - 2, iconSize * (hov ? 1.08 : 1), RAR_COL[rar], i * 0.2);
+          if (r.c > 1) {
+            const bx = cx + iconSize * 0.38, by = cy + iconSize * 0.34;
+            X.fillStyle = "rgba(6,9,14,.95)";
+            X.beginPath();
+            X.arc(bx, by, 8.5, 0, 6.283);
+            X.fill();
+            X.strokeStyle = RAR_COL[rar];
+            X.lineWidth = 1.4;
+            X.stroke();
+            txt("" + r.c, bx, by + 3.4, 9, "#fff", "center", "800");
+          }
+        });
+        X.restore();
+        if (buildScrollMax > 0) {
+          const th = Math.max(24, (h * h) / content), ty = y + (buildScroll / buildScrollMax) * (h - th);
+          X.fillStyle = "rgba(255,255,255,.08)";
+          X.fillRect(x + w - 3, y, 3, h);
+          X.fillStyle = ACH;
+          X.fillRect(x + w - 3, ty, 3, th);
+          if (buildScroll < buildScrollMax - 1) {
+            const fg = X.createLinearGradient(0, y + h - 22, 0, y + h);
+            fg.addColorStop(0, "rgba(7,12,17,0)");
+            fg.addColorStop(1, "rgba(7,12,17,.85)");
+            X.fillStyle = fg;
+            X.fillRect(x, y + h - 22, w - 4, 22);
+          }
+        }
+      }
+      addEventListener(
+        "wheel",
+        (e) => {
+          if (st === "pause" || st === "dead" || (st === "online" && ["pause", "dead"].includes(net.gameState))) {
+            buildScroll += Math.sign(e.deltaY) * 46;
+            e.preventDefault();
+          }
+        },
+        { passive: false },
+      );
+      addEventListener("pointermove", (e) => {
+        if ((st === "pause" || st === "dead") && e.buttons & 1 && buildScrollMax > 0) {
+          const r = C.getBoundingClientRect();
+          buildScroll -= (e.movementY * H) / r.height;
+        }
+      });
+      addEventListener("keydown", (e) => {
+        if (st === "pause" || st === "dead") {
+          if (e.key === "PageDown") buildScroll += 140;
+          if (e.key === "PageUp") buildScroll -= 140;
+        }
+      });
       function drawBuildPanels() {
         const picks = new Map();
         for (const n of S.runPicks || []) picks.set(n, (picks.get(n) || 0) + 1);
@@ -8323,34 +10372,8 @@
         drawPanel(x, y, w, h, "rgba(" + ACC + ",.3)", "rgba(7,12,17,.9)");
         txt("TU BUILD", x + 16, y + 26, 11, ACH, "left", "800");
         txt(rows.length + " mejoras · nivel " + level, x + w - 14, y + 26, 9, "#8da0a6", "right", "600");
-        const rowH = 38,
-          max = Math.floor((h - 62) / rowH);
-        if (!rows.length)
-          txt("Aún sin mejoras. Sube de nivel para elegir.", x + 16, y + 60, 10, "#8da0a6", "left", "500", w - 32);
-        rows.slice(0, max).forEach((r, i) => {
-          const yy = y + 46 + i * rowH,
-            tier = r.u ? (r.u.r === 2 ? "#b79a74" : r.u.r === 1 ? "#a99abd" : "#82b6b2") : "#82b6b2",
-            currentLevel = r.u ? S.upgradeCounts[r.u.key || r.u.n] || r.c : r.c;
-          offerRectTooltip(
-            x + 15,
-            yy + 1,
-            31,
-            31,
-            r.n,
-            (r.u?.d || "Mejora elegida durante esta partida.") +
-              "\nNivel " +
-              currentLevel +
-              (r.u ? " · " + upgradeLevelEffect(r.u, currentLevel) : ""),
-            tier,
-            3,
-          );
-          drawIcon(r.u ? r.u.i : "mass", x + 30, yy + 16, 26, tier, 0);
-          txt(r.n, x + 54, yy + 14, 11, "#e5ebed", "left", "700", w - 120);
-          txt(r.u ? r.u.d : "", x + 54, yy + 28, 9, "#8da0a6", "left", "500", w - 70);
-          if (r.c > 1) txt("×" + r.c, x + w - 14, yy + 16, 12, tier, "right", "800");
-        });
-        if (rows.length > max)
-          txt("+" + (rows.length - max) + " más", x + w - 14, y + h - 12, 9, "#8da0a6", "right", "700");
+        drawBuildGrid(x + 10, y + 42, w - 20, h - 74, 60, 40);
+        txt(buildScrollMax > 0 ? "RUEDA · ARRASTRAR · AV/RE PÁG" : "PASA EL RATÓN POR UN ICONO", x + w / 2, y + h - 14, 8, "#6f8087", "center", "600");
         x = W - w - 18;
         drawPanel(x, y, w, h, "rgba(" + ACC + ",.3)", "rgba(7,12,17,.9)");
         txt("ESTADÍSTICAS", x + 16, y + 26, 11, ACH, "left", "800");
@@ -8460,67 +10483,67 @@
           );
         const dashReady = Math.max(0, Math.min(1, 1 - P.dash / P.dcd));
         if (compact) {
-          drawPanel(18, H - 42, 92, 25, "rgba(172,190,206,.12)", "rgba(8,13,18,.78)");
-          txt("SPACE", 29, H - 26, 8, "#819097", "left", "700");
+          drawPanel(18, H - 56, 92, 25, "rgba(172,190,206,.12)", "rgba(8,13,18,.78)");
+          txt("SPACE", 29, H - 40, 8, "#819097", "left", "700");
           txt(
             P.dash <= 0 ? "LISTO" : P.dash.toFixed(1) + "s",
             102,
-            H - 26,
+            H - 40,
             8,
             P.dash <= 0 ? "#a9ddd4" : "#8a969d",
             "right",
             "700",
           );
           X.fillStyle = "rgba(255,255,255,.1)";
-          X.fillRect(29, H - 22, 72, 2);
+          X.fillRect(29, H - 36, 72, 2);
           X.fillStyle = "#bda978";
-          X.fillRect(29, H - 22, 72 * dashReady, 2);
-          drawPanel(116, H - 42, 92, 25, "rgba(172,190,206,.12)", "rgba(8,13,18,.78)");
-          txt("Q", 127, H - 26, 8, "#819097", "left", "700");
+          X.fillRect(29, H - 36, 72 * dashReady, 2);
+          drawPanel(116, H - 56, 92, 25, "rgba(172,190,206,.12)", "rgba(8,13,18,.78)");
+          txt("Q", 127, H - 40, 8, "#819097", "left", "700");
           txt(
             P.ult >= 100 ? "LISTO" : Math.round(P.ult) + "%",
             200,
-            H - 26,
+            H - 40,
             8,
             P.ult >= 100 ? "#b5dfd9" : "#8a969d",
             "right",
             "700",
           );
           X.fillStyle = "rgba(255,255,255,.1)";
-          X.fillRect(127, H - 22, 72, 2);
+          X.fillRect(127, H - 36, 72, 2);
           X.fillStyle = "#a79abd";
-          X.fillRect(127, H - 22, 72 * Math.max(0, Math.min(1, P.ult / 100)), 2);
+          X.fillRect(127, H - 36, 72 * Math.max(0, Math.min(1, P.ult / 100)), 2);
         } else {
-          drawPanel(18, H - 58, 100, 38, "rgba(172,190,206,.12)", "rgba(8,13,18,.78)");
-          txt("SPACE", 31, H - 42, 9, "#819097", "left", "700");
+          drawPanel(18, H - 74, 100, 38, "rgba(172,190,206,.12)", "rgba(8,13,18,.78)");
+          txt("SPACE", 31, H - 58, 9, "#819097", "left", "700");
           txt(
             P.dash <= 0 ? "LISTO" : P.dash.toFixed(1) + "s",
             106,
-            H - 42,
+            H - 58,
             10,
             P.dash <= 0 ? "#a9ddd4" : "#8a969d",
             "right",
             "700",
           );
           X.fillStyle = "rgba(255,255,255,.1)";
-          X.fillRect(31, H - 33, 75, 2);
+          X.fillRect(31, H - 49, 75, 2);
           X.fillStyle = "#bda978";
-          X.fillRect(31, H - 33, 75 * dashReady, 2);
-          drawPanel(126, H - 58, 100, 38, "rgba(172,190,206,.12)", "rgba(8,13,18,.78)");
-          txt("Q · PULSO", 139, H - 42, 9, "#819097", "left", "700");
+          X.fillRect(31, H - 49, 75 * dashReady, 2);
+          drawPanel(126, H - 74, 100, 38, "rgba(172,190,206,.12)", "rgba(8,13,18,.78)");
+          txt("Q · PULSO", 139, H - 58, 9, "#819097", "left", "700");
           txt(
             P.ult >= 100 ? "LISTO" : Math.round(P.ult) + "%",
             214,
-            H - 42,
+            H - 58,
             10,
             P.ult >= 100 ? "#b5dfd9" : "#8a969d",
             "right",
             "700",
           );
           X.fillStyle = "rgba(255,255,255,.1)";
-          X.fillRect(139, H - 33, 75, 2);
+          X.fillRect(139, H - 49, 75, 2);
           X.fillStyle = "#a79abd";
-          X.fillRect(139, H - 33, 75 * Math.max(0, Math.min(1, P.ult / 100)), 2);
+          X.fillRect(139, H - 49, 75 * Math.max(0, Math.min(1, P.ult / 100)), 2);
         }
         const xpw = Math.max(0, Math.min(1, xp / xpNext));
         X.fillStyle = "rgba(255,255,255,.09)";
@@ -8528,7 +10551,7 @@
         X.fillStyle = ACH;
         X.fillRect(0, H - 3, W * xpw, 3);
         if (!compact)
-          txt("NV " + level + "  ·  " + Math.floor(xp) + " / " + xpNext, 244, H - 14, 9, "#829199", "left", "600");
+          txt("NV " + level + "  ·  " + Math.floor(xp) + " / " + xpNext, 244, H - 52, 9, "#829199", "left", "600");
         if (combo > 1) {
           const ca = uiPrefs.reducedMotion ? 0.82 : 0.82 + 0.18 * Math.sin(performance.now() * 0.008);
           X.globalAlpha = ca;
@@ -8574,7 +10597,7 @@
       }
       function drawMinimap(compact = false) {
         const x = compact ? W - 138 : W - 190,
-          y = compact ? H - 94 : H - 132,
+          y = compact ? H - 106 : H - 148,
           w = compact ? 120 : 172,
           h = compact ? 68 : 104,
           cw = w / 4,
@@ -8689,6 +10712,318 @@
       }
       function isNarrowUi() {
         return (C.clientWidth || W) < 820;
+      }
+
+      /* ============================================================
+         ICONOS DE MEJORAS + EFECTOS DE RAREZA (estilo Balatro)
+         ============================================================ */
+      const RAR_COL = ["#79b6ff", "#5fe0a0", "#ffbf4d", "#9d7bff", "#ff6ad5", "#ff3a4f"];
+      const RAR_NAME = ["COMÚN", "AVANZADA", "EXÓTICA", "ÉPICA", "LEGENDARIA", "MÍTICA"];
+      function starP(n, r1, r2, c = 12) {
+        let d = "";
+        for (let i = 0; i < n * 2; i++) {
+          const a = -Math.PI / 2 + (i * Math.PI) / n, r = i % 2 ? r2 : r1;
+          d += (i ? "L" : "M") + (c + Math.cos(a) * r).toFixed(2) + " " + (c + Math.sin(a) * r).toFixed(2);
+        }
+        return d + "z";
+      }
+      function bladeP(a0, a1) {
+        const p = (a, r) => (12 + Math.cos(a) * r).toFixed(2) + " " + (12 + Math.sin(a) * r).toFixed(2);
+        return "M" + p(a0, 3.2) + "L" + p(a0, 9.5) + "A9.5 9.5 0 0 1 " + p(a1, 9.5) + "L" + p(a1, 3.2) + "A3.2 3.2 0 0 0 " + p(a0, 3.2) + "z";
+      }
+      const HEART = "M12 20.5s-8.5-5.4-8.5-11A4.6 4.6 0 0 1 12 7a4.6 4.6 0 0 1 8.5 2.5c0 5.6-8.5 11-8.5 11z";
+      const SHIELD = "M12 2.5l8 3v6.5c0 5-3.4 8.2-8 9.5-4.6-1.3-8-4.5-8-9.5V5.5z";
+      const FLAME = "M12 2.5c.8 4 5 5.5 5 10.5a5 5 0 0 1-10 0c0-2.2 1-3.4 2.2-4.4.1 2 1 3 2.2 3.2.4-4.4-.6-6 .6-9.3z";
+      const ICONS = {
+        chain: ["M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7", "M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"],
+        mass: ["~M12 7.5a4.5 4.5 0 1 0 0 9a4.5 4.5 0 1 0 0-9z", "M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"],
+        orbit: ["~M12 10a2 2 0 1 0 0 4a2 2 0 1 0 0-4z", "M3 12a9 4 0 1 0 18 0a9 4 0 1 0-18 0", "M12 3a4 9 0 1 0 0 18a4 9 0 1 0 0-18"],
+        heart: ["~" + HEART],
+        heartplus: ["~" + HEART, "M12 10v5M9.5 12.5h5"],
+        brokenheart: ["~" + HEART, "M12.5 7.5l-2.2 3.6 3 2.2-1.6 3.6"],
+        speed: ["M5 6l6 6-6 6", "M13 6l6 6-6 6"],
+        dash: ["M3 8h6M1.5 12h9M3 16h6", "M13 6l7 6-7 6"],
+        dash2: ["M3 6l6 6-6 6", "M10 6l6 6-6 6", "M17 6l4 6-4 6"],
+        boost: ["~M12 3l6 8h-3.5v7h-5v-7H6z", "M8 21h8"],
+        lightning: ["~M13 2L4 14h7l-1 8 9-12h-7z"],
+        tesla: ["~M13 2L5 13h6l-1 7 8-11h-6z", "M3 8a10 10 0 0 1 3-4", "M21 16a10 10 0 0 1-3 4"],
+        shock: ["M12 11a1 1 0 1 0 0 2a1 1 0 1 0 0-2", "M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8", "M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16"],
+        vamp: ["~M12 3c4 5 6.5 8 6.5 11a6.5 6.5 0 0 1-13 0c0-3 2.5-6 6.5-11z", "M9 15a3 3 0 0 0 3 3"],
+        predator: ["M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16", "M12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6", "M12 1v4M12 19v4M1 12h4M19 12h4"],
+        spring: ["M3 17l4-10 5 10 5-10 4 10"],
+        anchor: ["M12 2.5a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5", "M12 22V8", "M5 13H2a10 10 0 0 0 20 0h-3", "M8 11h8"],
+        shield: ["~" + SHIELD],
+        shieldplus: ["~" + SHIELD, "M12 8.5v6M9 11.5h6"],
+        frenzy: ["~" + FLAME],
+        flame: ["~" + FLAME],
+        rage: ["~" + starP(8, 10.5, 5.2)],
+        burst: ["~" + starP(8, 10.5, 4.6)],
+        thorns: ["~" + starP(10, 10.5, 6.4), "M12 10a2 2 0 1 0 0 4a2 2 0 1 0 0-4"],
+        repair: ["~M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"],
+        breath: ["~M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"],
+        wind: ["M3 8h11a3 3 0 1 0-3-3", "M3 12h16a3 3 0 1 1-3 3", "M3 16h7"],
+        pulse: ["M2 12h5l2.5-6 4 12 2.5-6H22"],
+        boom: ["~M10.5 21a7 7 0 1 0 0-14a7 7 0 1 0 0 14z", "M15 7.5l3-3", "M18.5 3l1 2.2 2.3.4"],
+        magnet: ["M5 3v9a7 7 0 0 0 14 0V3", "M5 8h4M15 8h4"],
+        field: ["M12 2.5l8 4.5v10l-8 4.5-8-4.5V7z", "M12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6"],
+        bounce: ["M3 19C5 6 10 6 12 19", "M12 19c1.5-8 5-9 8-4", "M17 11l3 4-4 1"],
+        crit: ["~M12 2l2.6 7.4L22 12l-7.4 2.6L12 22l-2.6-7.4L2 12l7.4-2.6z"],
+        star: ["~" + starP(5, 10.5, 4.4)],
+        scrap: ["M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18", "M12 6.5v11", "M15 9.5c-.5-1-1.6-1.5-3-1.5-1.8 0-3 .9-3 2.2s1.2 1.8 3 2.1 3 .9 3 2.2-1.2 2-3 2c-1.4 0-2.5-.6-3-1.6"],
+        echo: ["M6 12a6 6 0 0 1 12 0", "M3 12a9 9 0 0 1 18 0", "M9 12a3 3 0 0 1 6 0", "M12 15.5h.01"],
+        after: ["M4 8h10v11H4z", "M10 4h10v11"],
+        return: ["M9 14L4 9l5-5", "M4 9h9a6 6 0 0 1 0 12h-3"],
+        ice: ["M12 2v20", "M3.3 7l17.4 10", "M3.3 17L20.7 7", "M9.5 4L12 6.5 14.5 4", "M9.5 20L12 17.5 14.5 20"],
+        mark: ["~M12 21.5s-6.5-5.7-6.5-11.5a6.5 6.5 0 1 1 13 0c0 5.8-6.5 11.5-6.5 11.5z", "M12 7.5a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5"],
+        vortex: ["M12 12a1.5 1.5 0 0 1 3 0a4.5 4.5 0 0 1-9 0a7.5 7.5 0 0 1 15 0"],
+        saw: ["~" + starP(12, 10.8, 8.2), "M12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6"],
+        barrier: ["M3.5 14a8.5 8.5 0 0 1 17 0", "M7 17.5a5.5 5.5 0 0 1 10 0", "M12 10h.01"],
+        mines: ["~M12 7.5a4.5 4.5 0 1 0 0 9a4.5 4.5 0 1 0 0-9z", "M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2 2M16.4 16.4l2 2M18.4 5.6l-2 2M7.6 16.4l-2 2", "M4 22h16"],
+        storm: ["M17.5 14a4 4 0 0 0-.5-8 5.5 5.5 0 0 0-10.4 1.5A3.7 3.7 0 0 0 7 14", "~M13 11l-3.5 5h4.5l-3 6"],
+        artillery: ["~M8 21V10c0-3 2-6 4-8 2 2 4 5 4 8v11z", "M6 21h12", "M8 14h8"],
+        radiation: ["~" + bladeP(-Math.PI / 2 - 0.52, -Math.PI / 2 + 0.52), "~" + bladeP(Math.PI / 6 - 0.52, Math.PI / 6 + 0.52), "~" + bladeP((5 * Math.PI) / 6 - 0.52, (5 * Math.PI) / 6 + 0.52)],
+        pumped: ["M6 11l6-6 6 6", "M6 19l6-6 6 6"],
+        dice: ["M5 3.5h14a1.5 1.5 0 0 1 1.5 1.5v14a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19V5A1.5 1.5 0 0 1 5 3.5z", "~M8.5 7a1.2 1.2 0 1 0 0 2.4a1.2 1.2 0 1 0 0-2.4z", "~M15.5 7a1.2 1.2 0 1 0 0 2.4a1.2 1.2 0 1 0 0-2.4z", "~M12 10.8a1.2 1.2 0 1 0 0 2.4a1.2 1.2 0 1 0 0-2.4z", "~M8.5 14.6a1.2 1.2 0 1 0 0 2.4a1.2 1.2 0 1 0 0-2.4z", "~M15.5 14.6a1.2 1.2 0 1 0 0 2.4a1.2 1.2 0 1 0 0-2.4z"],
+        hourglass: ["M5 22h14", "M5 2h14", "M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12l-4.4 4.4A2 2 0 0 0 7 17.8V22", "M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4A2 2 0 0 0 17 6.2V2"],
+        eye: ["M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z", "~M12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6z"],
+        warp: ["M3 12h13", "M12 6l6 6-6 6", "M21 4v16"],
+        gift: ["M3 8h18v4H3z", "M5 12v9h14v-9", "M12 8v13", "M12 8C9 8 7 6.8 7 5s3-2 5 3c2-5 5-3 5-3s-2 3-5 3"],
+        bone: ["~M17 10c.7-.7 1.7 0 2.5 0a2.5 2.5 0 1 0 0-5 .5.5 0 0 1-.5-.5 2.5 2.5 0 1 0-5 0c0 .8.7 1.8 0 2.5l-7 7c-.7.7-1.7 0-2.5 0a2.5 2.5 0 0 0 0 5c.3 0 .5.2.5.5a2.5 2.5 0 1 0 5 0c0-.8-.7-1.8 0-2.5z"],
+        hammer: ["~M13 3.5l7.5 7.5-3.5 3.5L9.5 7z", "M12.5 12.5L3.5 21.5"],
+        bulb: ["M9 18h6", "M10 21.5h4", "M12 2.5a6 6 0 0 0-3.8 10.6c.9.8 1.3 1.6 1.3 2.4h5c0-.8.4-1.6 1.3-2.4A6 6 0 0 0 12 2.5z"],
+        fish: ["~M3 12c3-5.5 8-6.5 13-3.5l5-3v13l-5-3C11 18.5 6 17.5 3 12z", "M7.5 11h.01"],
+        thermo: ["~M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0z", "M12 9v7"],
+        gem: ["~M6 3h12l4 6-10 12L2 9z", "M2 9h20", "M9 3l-2 6 5 12 5-12-2-6"],
+        sword: ["M14.5 17.5L3 6V3h3l11.5 11.5", "M13 19l6-6", "M16 16l4 4", "M19 21l2-2"],
+        crown: ["~M3 18L2 7l6 5 4-7 4 7 6-5-1 11z", "M3 21h18"],
+        clock: ["M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18", "M12 7v5l3.5 2"],
+        pause: ["M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18", "M10 9v6", "M14 9v6"],
+        drip: ["M8 3h8v5H8z", "M12 8v7", "~M12 15c2 2.5 3 4 3 5.5a3 3 0 0 1-6 0c0-1.5 1-3 3-5.5z"],
+        flask: ["M9 2.5h6", "M10 2.5v6L4.5 19.5A1.6 1.6 0 0 0 6 22h12a1.6 1.6 0 0 0 1.5-2.5L14 8.5v-6", "M7.5 15h9"],
+        trophy: ["M8 21h8", "M12 17v4", "~M7 3.5h10v5.5a5 5 0 0 1-10 0z", "M7 5.5H4v2a3 3 0 0 0 3 3", "M17 5.5h3v2a3 3 0 0 1-3 3"],
+        ghost: ["~M5 21V11a7 7 0 0 1 14 0v10l-2.5-2-2 2-2.5-2-2.5 2-2-2z", "M9.5 11h.01", "M14.5 11h.01"],
+        hole: ["~M12 9.5a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5z", "M12 3a9 9 0 1 0 9 9", "M12 6a6 6 0 1 0 6 6", "M21 12l-2-2M18 12l-2 2"],
+        echo: ["~M8 8a3 3 0 1 0 0 6a3 3 0 1 0 0-6z", "M13.5 6.5a6 6 0 0 1 0 9", "M17 4a10 10 0 0 1 0 14", "M20.5 2a14 14 0 0 1 0 19"],
+        crimson: ["~M12 3c3.5 4.5 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 2.5-6.5 6-11z", "M12 11v6M9 14h6"],
+        triad: ["~M12 4a2.6 2.6 0 1 0 0 5.2a2.6 2.6 0 1 0 0-5.2z", "~M6 14a2.6 2.6 0 1 0 0 5.2a2.6 2.6 0 1 0 0-5.2z", "~M18 14a2.6 2.6 0 1 0 0 5.2a2.6 2.6 0 1 0 0-5.2z", "M12 9.2L7 14M12 9.2L17 14M8.6 16.6h6.8"],
+        brokenclock: ["M12 3a9 9 0 1 0 9 9", "M12 7v5l3.5 2", "M17 3l-2.5 4 3 1.5-2 4"],
+      };
+      const ICON_BY_KEY = {
+        ghostDash: "ghost", doubleDash: "dash2", ultGuard: "pulse", bossDmg: "crown", opener: "mark", veteran: "star",
+        stillRegen: "breath", thorns: "thorns", ultKill: "pulse", dashHit: "dash", digest: "heartplus", gluttony: "scrap",
+        critHeal: "vamp", tough: "shield", revenge: "shock", corpulent: "heart", trophy: "trophy", shieldBlast: "burst",
+        selfHeal: "heartplus", hotFire: "flame", bigBoom: "boom", finalFury: "rage", ivDrip: "drip", dodgeHeal: "heartplus",
+        rechShield: "shield", saw: "saw", counter: "shock", recuperate: "repair", splash: "burst", poison: "flask",
+        shrapnel: "burst", digIn: "anchor", perfectionist: "gem", backstab: "sword", focus: "predator", pain: "brokenheart",
+        ironStance: "shield", topForm: "crown", shieldHeal: "shieldplus", delayed: "clock", recPeriod: "shieldplus",
+        slippery: "wind", pauseHeal: "pause", warm: "thermo", bigBrain: "bulb", smallFry: "fish", heavy: "hammer",
+        mines: "mines", barrier: "barrier", storm: "storm", artillery: "artillery", combustion: "flame",
+        radiation: "radiation", pumped: "pumped", critStreak: "crit", execCrit: "sword", patient: "hourglass",
+        bloodlust: "vamp", anticipate: "eye", frostNova: "ice", warp: "warp", gambler: "dice", bloodPact: "vamp",
+        freeDodge: "ghost", pandora: "gift", bigBoned: "bone",
+        singularity: "hole", ghostEcho: "echo", crimsonTide: "crimson", triad: "triad", timeBreak: "brokenclock",
+      };
+      for (const u of U) if (ICON_BY_KEY[u.key]) u.i = ICON_BY_KEY[u.key];
+      function badgePath(rar) {
+        X.beginPath();
+        if (rar === 0) X.arc(0, 0, 22, 0, 6.283);
+        else if (rar === 1) poly(0, 0, 22.5, 8, Math.PI / 8);
+        else if (rar === 2)
+          for (let i = 0; i < 24; i++) {
+            const a = (i * Math.PI) / 12 - Math.PI / 2, r = i % 2 ? 18.8 : 23;
+            X[i ? "lineTo" : "moveTo"](Math.cos(a) * r, Math.sin(a) * r);
+          }
+        else if (rar === 3)
+          for (let i = 0; i < 20; i++) {
+            const a = (i * Math.PI) / 10 - Math.PI / 2, r = i % 2 ? 17.5 : 23.5;
+            X[i ? "lineTo" : "moveTo"](Math.cos(a) * r, Math.sin(a) * r);
+          }
+        else if (rar === 4)
+          for (let i = 0; i < 32; i++) {
+            const a = (i * Math.PI) / 16 - Math.PI / 2, r = i % 2 ? 17.5 : 24.5;
+            X[i ? "lineTo" : "moveTo"](Math.cos(a) * r, Math.sin(a) * r);
+          }
+        else
+          for (let i = 0; i < 24; i++) {
+            const a = (i * Math.PI) / 12 - Math.PI / 2, r = i % 2 ? 14.5 : 25.5;
+            X[i ? "lineTo" : "moveTo"](Math.cos(a) * r, Math.sin(a) * r);
+          }
+        X.closePath();
+      }
+      function twinkle(x, y, r, a, col = "#fff") {
+        X.save();
+        X.globalAlpha = a;
+        X.strokeStyle = col;
+        X.lineWidth = Math.max(0.6, r * 0.22);
+        X.lineCap = "round";
+        X.beginPath();
+        X.moveTo(x - r, y);
+        X.lineTo(x + r, y);
+        X.moveTo(x, y - r);
+        X.lineTo(x, y + r);
+        X.stroke();
+        X.restore();
+      }
+      function drawIcon(kind, x, y, size, color, phase = 0) {
+        const rar = RAR_COL.indexOf(color), glyph = ICONS[kind];
+        if (rar < 0 || !glyph) return drawIconLegacy(kind, x, y, size, color, phase);
+        const calm = uiPrefs.reducedMotion,
+          t = calm ? 0 : performance.now() * 0.001 + phase,
+          beat = calm ? 0.5 : 0.5 + 0.5 * Math.sin(t * 2.4);
+        X.save();
+        X.translate(x, y);
+        X.scale(size / 48, size / 48);
+        badgePath(rar);
+        X.shadowColor = color;
+        X.shadowBlur = rar >= 4 ? 14 + beat * 14 : rar === 3 ? 11 + beat * 11 : rar === 2 ? 9 + beat * 9 : rar === 1 ? 7 : 3;
+        const bg = X.createRadialGradient(-6, -8, 2, 0, 0, 27);
+        bg.addColorStop(0, rar === 5 ? "rgba(72,14,22,.98)" : rar === 4 ? "rgba(60,20,58,.98)" : rar === 3 ? "rgba(34,26,68,.98)" : rar === 2 ? "rgba(58,44,22,.98)" : rar === 1 ? "rgba(20,48,40,.98)" : "rgba(22,34,54,.98)");
+        bg.addColorStop(1, "rgba(5,8,13,.99)");
+        X.fillStyle = bg;
+        X.fill();
+        X.shadowBlur = 0;
+        X.strokeStyle = color;
+        X.lineWidth = rar === 0 ? 1.8 : rar === 1 ? 2.3 : rar === 2 ? 2.7 : rar === 3 ? 2.9 : 3.1;
+        X.stroke();
+        X.save();
+        badgePath(rar);
+        X.clip();
+        const core = X.createRadialGradient(-5, -6, 1, 0, 0, 24);
+        core.addColorStop(0, color + "50");
+        core.addColorStop(1, color + "00");
+        X.fillStyle = core;
+        X.fillRect(-26, -26, 52, 52);
+        if (rar >= 1) {
+          const k = calm ? 0.3 : ((t * 0.55 + phase) % 1.7) - 0.35;
+          const sw = X.createLinearGradient(-26 + k * 52, -26, -6 + k * 52, 26);
+          sw.addColorStop(0, "rgba(255,255,255,0)");
+          sw.addColorStop(0.5, "rgba(255,255,255," + (rar >= 4 ? 0.45 : rar === 3 ? 0.4 : rar === 2 ? 0.34 : 0.22) + ")");
+          sw.addColorStop(1, "rgba(255,255,255,0)");
+          X.fillStyle = sw;
+          X.fillRect(-26, -26, 52, 52);
+        }
+        if (rar >= 2) {
+          const hu = calm ? 40 : (t * (rar === 4 ? 150 : rar === 3 ? 100 : 70)) % 360, hg = X.createLinearGradient(-24, -24, 24, 24);
+          for (let j = 0; j <= 4; j++)
+            hg.addColorStop(j / 4, rar === 5
+              ? "hsla(" + ((350 + ((t * 40 + j * 14) % 50)) % 360) + ",100%," + (50 + 14 * beat) + "%,.42)"
+              : "hsla(" + ((hu + j * 60) % 360) + ",95%,62%," + (rar === 4 ? 0.36 : rar === 3 ? 0.31 : 0.26) + ")");
+          X.globalCompositeOperation = "lighter";
+          X.fillStyle = hg;
+          X.fillRect(-26, -26, 52, 52);
+          X.globalCompositeOperation = "source-over";
+        }
+        X.restore();
+        X.save();
+        X.translate(-13.5, -13.5);
+        X.scale(27 / 24, 27 / 24);
+        X.lineCap = "round";
+        X.lineJoin = "round";
+        X.shadowColor = color;
+        X.shadowBlur = 5;
+        for (const d of glyph) {
+          const fill = d[0] === "~", p = new Path2D(fill ? d.slice(1) : d);
+          if (fill) {
+            X.fillStyle = color + "88";
+            X.fill(p);
+          }
+          X.strokeStyle = "#f7fbff";
+          X.lineWidth = 1.9;
+          X.stroke(p);
+        }
+        X.restore();
+        if (rar >= 1 && !calm) {
+          twinkle(-15, -16, 3 + 2 * Math.sin(t * 3 + 1), 0.4 + 0.5 * Math.max(0, Math.sin(t * 3 + 1)));
+          if (rar >= 2) twinkle(16, 12, 3.4, 0.4 + 0.5 * Math.max(0, Math.sin(t * 2.2)), "#fff2b8");
+          if (rar >= 4) {
+            twinkle(15, -15, 3.2, 0.4 + 0.5 * Math.max(0, Math.sin(t * 2.7 + 2)), "#ffd6f6");
+            twinkle(-16, 13, 2.8, 0.4 + 0.5 * Math.max(0, Math.sin(t * 3.3 + 4)), "#ffd6f6");
+            X.save();
+            X.strokeStyle = color;
+            X.globalAlpha = 0.55 + 0.3 * beat;
+            X.lineWidth = 1.2;
+            X.setLineDash([3, 5]);
+            X.lineDashOffset = -t * 24;
+            X.beginPath();
+            X.arc(0, 0, rar === 5 ? 29 : 27.5, 0, 6.283);
+            X.stroke();
+            if (rar === 5) {
+              X.lineDashOffset = t * 30;
+              X.beginPath();
+              X.arc(0, 0, 32, 0, 6.283);
+              X.stroke();
+            }
+            X.restore();
+          }
+        }
+        X.restore();
+      }
+      function iconLegacyPlaceholder() {}
+
+      const uiSparks = [];
+      const cardFx = [];
+      let pickSeen = {}, uiFxLast = performance.now();
+      function uiBurst(x, y, rar, scale = 1) {
+        const n = Math.round([14, 32, 70, 92, 115, 170][rar] * scale), calm = uiPrefs.reducedMotion;
+        if (calm) return;
+        uiSparks.push({ ring: 1, x, y, r: 8, l: 0.5, m: 0.5, c: RAR_COL[rar], g: [320, 320, 520, 580, 640, 780][rar] });
+        if (rar >= 4) uiSparks.push({ ring: 1, x, y, r: 4, l: 0.8, m: 0.8, c: "#ffffff", g: 420 });
+        for (let i = 0; i < n; i++) {
+          const a = Math.random() * 6.283, sp = 60 + Math.random() * (rar >= 2 ? 420 + 80 * (rar - 2) : 260);
+          uiSparks.push({
+            x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 40, l: 0.6 + Math.random() * 0.7, m: 1.2,
+            s: 1.6 + Math.random() * (rar >= 2 ? 3.2 : 2),
+            c: rar === 5 ? "hsl(" + Math.floor(Math.random() * 40) + ",100%,60%)" : rar >= 2 ? "hsl(" + Math.floor(Math.random() * 360) + ",95%,65%)" : RAR_COL[rar],
+            star: rar >= 1 && Math.random() < 0.4,
+          });
+        }
+      }
+      function drawUiSparks() {
+        const now = performance.now(), dt = Math.min(0.05, (now - uiFxLast) / 1000);
+        uiFxLast = now;
+        if (!uiSparks.length) return;
+        X.setTransform(C.width / W, 0, 0, C.height / H, 0, 0);
+        X.save();
+        X.globalCompositeOperation = "lighter";
+        for (let i = uiSparks.length - 1; i >= 0; i--) {
+          const p = uiSparks[i];
+          p.l -= dt;
+          if (p.l <= 0) {
+            uiSparks.splice(i, 1);
+            continue;
+          }
+          if (p.ring) {
+            p.r += p.g * dt;
+            X.globalAlpha = Math.max(0, p.l / p.m);
+            X.strokeStyle = p.c;
+            X.lineWidth = 3;
+            X.beginPath();
+            X.arc(p.x, p.y, p.r, 0, 6.283);
+            X.stroke();
+            continue;
+          }
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.vx *= Math.pow(0.25, dt);
+          p.vy = p.vy * Math.pow(0.25, dt) + 260 * dt;
+          X.globalAlpha = Math.min(1, p.l / 0.4);
+          if (p.star) twinkle(p.x, p.y, p.s * 1.8, X.globalAlpha, p.c);
+          else {
+            X.fillStyle = p.c;
+            X.beginPath();
+            X.arc(p.x, p.y, p.s, 0, 6.283);
+            X.fill();
+          }
+        }
+        X.restore();
+      }
+      function pickRarityFx(u, i) {
+        const r = upgradeBounds(i), rar = u.r || 0;
+        uiBurst(r.x + r.w / 2, r.y + r.h / 2, rar, 1.1);
+        if (rar >= 2) shk += 6 + 6 * (rar - 2);
+        if (rar >= 4) hs = Math.max(hs || 0, 0.12);
+        const notes = [[523, 659], [523, 659, 784], [523, 659, 784, 1046], [440, 554, 659, 880, 1109], [392, 523, 659, 784, 1046, 1318], [262, 392, 523, 659, 784, 1046, 1318, 1568]][rar];
+        notes.forEach((f, k) => setTimeout(() => snd(f, 0.14, rar >= 2 ? "triangle" : "sine", 0.05 + 0.01 * rar, 1), k * 70));
       }
       function upgradeBounds(i) {
         const narrow = isNarrowUi();
@@ -8847,9 +11182,10 @@
       }
       function drawUpgradeChoice() {
         const narrow = isNarrowUi();
+        if (pickT < 0.06) pickSeen = {};
         X.fillStyle = "rgba(3,7,11,.84)";
         X.fillRect(0, 0, W, H);
-        drawPanel(42, 72, 876, 458, "rgba(" + ACC + ",.22)", "rgba(7,12,17,.95)");
+        drawPanel(42, 60, 876, 500, "rgba(" + ACC + ",.22)", "rgba(7,12,17,.95)");
         txt("MEJORA PERSONAL", 76, 111, 10, "#78918f", "left", "700");
         txt("Nivel " + level, 76, 146, 30, "#e7edee", "left", "800");
         txt("Elige una mejora", W - 76, 143, 13, "#8e9ca2", "right", "500");
@@ -8859,20 +11195,90 @@
             reg = uiButtons.push({ x, y, w, h, active: false }),
             hover = inRect(mouse.x, mouse.y, x, y, w, h),
             enter = uiPrefs.reducedMotion ? 1 : Math.min(1, pickT * 3 - i * 0.24),
-            tier = u.r === 2 ? "#b79a74" : u.r === 1 ? "#a99abd" : "#82b6b2",
+            tier = RAR_COL[u.r || 0],
             key = u.key || u.n,
             num = S.upgradeCounts[key] || 0,
             next = num + 1,
             synergy = upgradeSynergy(u),
             effect = upgradeLevelEffect(u, next);
+          const rar = u.r || 0,
+            tmr = uiPrefs.reducedMotion ? 0 : performance.now() * 0.001,
+            fxs = (cardFx[i] = cardFx[i] || { h: 0 }),
+            ease = 1 - Math.pow(1 - Math.max(0, enter), 3),
+            ccx = x + w / 2,
+            ccy = y + h / 2;
+          fxs.h += ((hover ? 1 : 0) - fxs.h) * 0.2;
+          if (enter >= 1 && !pickSeen[i]) {
+            pickSeen[i] = 1;
+            if (rar > 0) uiBurst(ccx, ccy, rar, 0.45);
+          }
+          const tiltX = hover ? clamp((mouse.x - ccx) / (w / 2), -1, 1) : 0,
+            tiltY = hover ? clamp((mouse.y - ccy) / (h / 2), -1, 1) : 0,
+            bob = uiPrefs.reducedMotion ? 0 : Math.sin(tmr * 1.6 + i * 1.7) * 3,
+            sc = (0.96 + 0.06 * fxs.h) * (0.2 + 0.8 * ease);
+          X.save();
+          X.translate(ccx, ccy + bob - 6 * fxs.h);
+          X.rotate((uiPrefs.reducedMotion ? 0 : Math.sin(tmr * 1.1 + i) * 0.012) + tiltX * 0.045 * fxs.h + (1 - ease) * 0.35 * (i - 1));
+          X.scale(sc * Math.max(0.02, ease), sc);
+          X.translate(-ccx, -ccy);
           X.globalAlpha = enter;
-          X.fillStyle = hover ? "rgba(" + ACC + ",.11)" : "rgba(255,255,255,.025)";
+          const bgG = X.createLinearGradient(x, y, x, y + h);
+          bgG.addColorStop(0, rar === 5 ? "rgba(84,14,26,.62)" : rar === 4 ? "rgba(70,24,68,.58)" : rar === 3 ? "rgba(40,30,86,.55)" : rar === 2 ? "rgba(70,52,22,.5)" : rar === 1 ? "rgba(24,64,50,.5)" : "rgba(30,44,66,.45)");
+          bgG.addColorStop(1, "rgba(8,11,17,.9)");
+          X.fillStyle = bgG;
           X.fillRect(x, y, w, h);
-          X.strokeStyle = hover ? tier : "rgba(172,190,206,.18)";
-          X.lineWidth = hover ? 1.6 : 1;
+          if (hover) {
+            X.fillStyle = "rgba(255,255,255,.04)";
+            X.fillRect(x, y, w, h);
+          }
+          X.save();
+          X.beginPath();
+          X.rect(x, y, w, h);
+          X.clip();
+          if (rar >= 1) {
+            const k = ((tmr * 0.4 + i * 0.35 + tiltX * 0.15) % 1.8) - 0.4,
+              sw = X.createLinearGradient(x + k * w, y, x + k * w + w * 0.55, y + h * 0.7);
+            sw.addColorStop(0, "rgba(255,255,255,0)");
+            sw.addColorStop(0.5, "rgba(255,255,255," + (rar >= 4 ? 0.24 : rar === 3 ? 0.2 : rar === 2 ? 0.17 : 0.1) + ")");
+            sw.addColorStop(1, "rgba(255,255,255,0)");
+            X.fillStyle = sw;
+            X.fillRect(x, y, w, h);
+          }
+          if (rar >= 2) {
+            const hu = (tmr * (rar === 4 ? 90 : rar === 3 ? 65 : 40) + i * 80 + tiltX * 40) % 360,
+              hg = X.createLinearGradient(x, y, x + w, y + h),
+              pulse4 = 0.5 + 0.5 * Math.sin(tmr * 3);
+            for (let j = 0; j <= 5; j++)
+              hg.addColorStop(j / 5, rar === 5
+                ? "hsla(" + ((350 + ((tmr * 30 + j * 12) % 50)) % 360) + ",100%,55%," + (0.14 + 0.1 * pulse4 + 0.06 * fxs.h) + ")"
+                : "hsla(" + ((hu + j * 55) % 360) + ",95%,62%," + ((rar === 4 ? 0.16 : rar === 3 ? 0.125 : 0.09) + 0.06 * fxs.h) + ")");
+            X.globalCompositeOperation = "lighter";
+            X.fillStyle = hg;
+            X.fillRect(x, y, w, h);
+            X.globalCompositeOperation = "source-over";
+          }
+          if (rar >= 1 && !uiPrefs.reducedMotion)
+            for (let j = 0; j < rar * 3 + 1; j++) {
+              const px = x + w * 0.4 + ((j * 97.3 + i * 41) % (w * 0.5)),
+                py = y + ((j * 63.7 + i * 29) % (h * 0.2)) + 10,
+                ph = Math.sin(tmr * 2.4 + j * 1.9 + i);
+              twinkle(px, py, 2.2 + 2.2 * Math.max(0, ph), Math.max(0, ph) * (rar >= 2 ? 0.9 : 0.6), rar === 5 ? "#ffd0c8" : rar === 4 ? "#ffd6f6" : rar === 3 ? "#e3d6ff" : rar === 2 ? "#fff2b8" : "#d9fff0");
+            }
+          X.restore();
+          X.shadowColor = tier;
+          X.shadowBlur = rar >= 4 ? 18 + 10 * fxs.h + (rar === 5 ? 8 * Math.sin(tmr * 4) : 0) : rar === 3 ? 15 + 8 * fxs.h : rar === 2 ? 12 + 8 * fxs.h : rar === 1 ? 7 + 6 * fxs.h : 3 * fxs.h;
+          X.strokeStyle = hover || rar > 0 ? tier : "rgba(172,190,206,.28)";
+          X.lineWidth = rar >= 4 ? 3.2 : rar === 3 ? 2.9 : rar === 2 ? 2.6 : rar === 1 ? 2 : hover ? 1.8 : 1.2;
           X.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+          if (rar >= 4) {
+            X.lineWidth = 1;
+            X.globalAlpha = enter * 0.5;
+            X.strokeRect(x + 5.5, y + 5.5, w - 11, h - 11);
+            X.globalAlpha = enter;
+          }
+          X.shadowBlur = 0;
           X.fillStyle = tier;
-          X.fillRect(x, y, 30, 2);
+          X.fillRect(x, y, 30, 3);
           X.save();
           X.beginPath();
           X.rect(x + 8, y + 7, w - 16, h - 14);
@@ -8880,7 +11286,7 @@
           if (narrow) {
             drawIcon(u.i, x + 40, y + 45, 36, tier, 0);
             txt(
-              u.r === 2 ? "EXÓTICA" : u.r === 1 ? "AVANZADA" : "COMÚN",
+              RAR_NAME[u.r || 0],
               x + 72,
               y + 17,
               8,
@@ -8898,7 +11304,7 @@
             drawIcon(u.i, x + 42, y + 46, 40, tier, 0);
             txt("0" + (i + 1), x + w - 16, y + 22, 10, "#718087", "right", "700");
             txt(
-              u.r === 2 ? "EXÓTICA" : u.r === 1 ? "AVANZADA" : "COMÚN",
+              RAR_NAME[u.r || 0],
               x + 18,
               y + 88,
               9,
@@ -8919,9 +11325,39 @@
             }
           }
           X.restore();
+          X.restore();
           X.globalAlpha = 1;
         });
-        txt("1 / 2 / 3  ·  WASD mueve mientras eliges", W / 2, 505, 10, "#74838b", "center", "500");
+        if (canReroll()) {
+          const free = (S.freeRerolls || 0) > 0, c = free ? null : peekCurse(), bx = W / 2 - 190, by = 478, bw = 380, bh = 36,
+            hv = inRect(mouse.x, mouse.y, bx, by, bw, bh);
+          uiButtons.push({ x: bx, y: by, w: bw, h: bh, active: false });
+          X.fillStyle = hv ? "rgba(90,16,32,.9)" : "rgba(52,12,24,.75)";
+          X.fillRect(bx, by, bw, bh);
+          X.strokeStyle = hv ? "#ff6b81" : "rgba(255,77,109,.55)";
+          X.lineWidth = 1.4;
+          X.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+          X.strokeStyle = "#ff8a9b";
+          X.lineWidth = 2;
+          X.beginPath();
+          X.arc(bx + 22, by + 18, 7, -0.4, 4.6);
+          X.stroke();
+          X.fillStyle = "#ff8a9b";
+          X.beginPath();
+          X.moveTo(bx + 27, by + 8);
+          X.lineTo(bx + 31, by + 15);
+          X.lineTo(bx + 22, by + 14);
+          X.fill();
+          txt(free ? "RE-ROLL  [R]  · GRATIS ×" + S.freeRerolls : "RE-ROLL  [R]  · " + (3 - rerollsThis) + (rerollsThis === 2 ? " restante" : " restantes"), bx + 40, by + 15, 10.5, "#ffd3d9", "left", "800", 190);
+          txt(free ? "SIN MALDICIÓN" : "+ " + c.n.toUpperCase(), bx + bw - 12, by + 15, 9.5, free ? "#7fe3b0" : "#ff6b81", "right", "800", 170);
+          txt(free ? "Habilidad: re-roll limpio" : c.d, bx + 40, by + 28, 8.2, "#c79aa3", "left", "500", bw - 52);
+        }
+        if (curseFlash && performance.now() < curseFlash.until) {
+          X.globalAlpha = Math.min(1, (curseFlash.until - performance.now()) / 500);
+          txt((curseFlash.good ? "" : "MALDICIÓN · ") + curseFlash.n.toUpperCase() + " — " + curseFlash.d, W / 2, 176, 11, curseFlash.good ? "#7fe3b0" : "#ff6b81", "center", "800", 800);
+          X.globalAlpha = 1;
+        }
+        txt("1 / 2 / 3  ·  R re-roll (suma una maldición)  ·  WASD mueve mientras eliges", W / 2, 540, 10, "#74838b", "center", "500");
       }
       function drawUpgradeWaiting() {
         const online = st === "online",
@@ -8993,9 +11429,9 @@
       function drawDeath() {
         X.fillStyle = "rgba(3,7,11,.88)";
         X.fillRect(0, 0, W, H);
-        drawPanel(66, 18, 828, 564, "rgba(215,121,121,.34)", "rgba(9,13,18,.98)");
-        txt("RUN TERMINADA", W / 2, 52, 10, "#bc8985", "center", "800");
-        txt("RESUMEN DE PARTIDA", W / 2, 84, 26, "#e7edef", "center", "800");
+        drawPanel(66, 24, 828, 552, "rgba(215,121,121,.34)", "rgba(9,13,18,.98)");
+        txt("RUN TERMINADA", W / 2, 56, 10, "#bc8985", "center", "800");
+        txt("RESUMEN DE PARTIDA", W / 2, 88, 26, "#e7edef", "center", "800");
         const teamKills =
             st === "online" && net.players?.length
               ? net.players.reduce((n, p) => n + (p.player?.kills || 0), 0)
@@ -9049,7 +11485,9 @@
                 ? "Las minas marcan su zona antes de armarse: no pises el círculo."
                 : "Los proyectiles se pueden interceptar con la masa o esquivar con el dash."
             : "No hay datos del último golpe.";
-        drawPanel(98, 198, 372, 138, "rgba(215,121,121,.4)", "rgba(255,255,255,.025)");
+        X.save();
+        X.translate(0, -6);
+        drawPanel(98, 198, 372, 146, "rgba(215,121,121,.4)", "rgba(255,255,255,.025)");
         txt("CAUSA DE LA MUERTE", 116, 222, 9, "#d79a95", "left", "800");
         if (known) drawAlmanacIcon(id, 138, 262, 20, true);
         else {
@@ -9078,7 +11516,7 @@
           ["ESCUDOS GASTADOS", rs.blocked],
           ["MÁS ELIMINADO", topName],
         ];
-        drawPanel(490, 198, 372, 138, "rgba(" + ACC + ",.3)", "rgba(255,255,255,.025)");
+        drawPanel(490, 198, 372, 146, "rgba(" + ACC + ",.3)", "rgba(255,255,255,.025)");
         txt("RENDIMIENTO", 508, 222, 9, ACH, "left", "800");
         perf.forEach((q, i) => {
           const cx = 508 + (i % 2) * 182,
@@ -9086,21 +11524,13 @@
           txt(q[0], cx, yy, 8.5, "#8da0a6", "left", "700", 92);
           txt(String(q[1]), cx + 170, yy, 11, "#e5edef", "right", "800", 76);
         });
-        const picks = new Map();
-        for (const n of (S && S.runPicks) || []) picks.set(n, (picks.get(n) || 0) + 1);
-        const rows = [...picks].map(([n, c]) => ({ n, c, u: U.find((q) => q.n === n) }));
-        drawPanel(98, 352, 764, 92, "rgba(" + ACC + ",.3)", "rgba(255,255,255,.02)");
-        txt("BUILD DE ESTA RUN", 116, 376, 10, ACH, "left", "800");
-        rows.slice(0, 15).forEach((r, i) => {
-          const x = 130 + i * 47,
-            tier = r.u ? (r.u.r === 2 ? "#b79a74" : r.u.r === 1 ? "#a99abd" : "#82b6b2") : "#82b6b2";
-          drawIcon(r.u ? r.u.i : "mass", x, 404, 28, tier, 0);
-          if (r.c > 1) txt("×" + r.c, x + 14, 428, 9, "#e5ebed", "center", "800");
-        });
-        if (rows.length > 15) txt("+" + (rows.length - 15), 850, 404, 11, "#8da0a6", "right", "700");
-        if (!rows.length) txt("Sin mejoras seleccionadas", 116, 408, 10, "#8da0a6", "left", "500");
+        X.restore();
+        drawPanel(98, 348, 764, 108, "rgba(" + ACC + ",.3)", "rgba(255,255,255,.02)");
+        txt("BUILD DE ESTA RUN", 116, 370, 10, ACH, "left", "800");
+        txt(buildScrollMax > 0 ? "RUEDA / ARRASTRA PARA VER MÁS" : buildEntries().length + " MEJORAS", 846, 370, 8, "#7d8c93", "right", "600");
+        drawBuildGrid(108, 378, 744, 66, 46, 34);
         const evo = ((S && S.evolutions) || []).map((i) => EVO_IDS[i]).filter(Boolean);
-        if (evo.length) txt("EVOLUCIONES · " + evo.join(" · "), 116, 438, 9, "#ffe28a", "left", "700", 730);
+        if (evo.length) txt("EVOLUCIONES · " + evo.join(" · "), 116, 451, 9, "#ffe28a", "left", "700", 730);
         const records = runRecords.length
           ? "RÉCORDS BATIDOS  ·  " +
             runRecords
@@ -9122,14 +11552,21 @@
         txt(
           records.length > 104 ? records.slice(0, 101) + "…" : records,
           W / 2,
-          468,
+          492,
           9,
           newBest ? "#ffe28a" : "#97a5aa",
           "center",
           "700",
         );
-        drawButton(240, 490, 210, 46, "REINTENTAR", "ENTER", true);
-        drawButton(510, 490, 210, 46, st === "online" ? "SALIR" : "MENÚ", "ESC");
+        if (st !== "online") txt("◆ +" + (meta.last || 0) + " FRAGMENTOS  ·  TOTAL " + meta.f, W / 2, 474, 11, "#ffd98a", "center", "800");
+        if (st === "online") {
+          drawButton(240, 506, 210, 44, "REINTENTAR", "ENTER", true);
+          drawButton(510, 506, 210, 44, "SALIR", "ESC");
+        } else {
+          drawButton(150, 506, 200, 44, "REINTENTAR", "ENTER", true);
+          drawButton(380, 506, 200, 44, "HABILIDADES", "H");
+          drawButton(610, 506, 200, 44, "MENÚ", "ESC");
+        }
       }
 
       function drawDirectorPanel() {
@@ -9443,7 +11880,7 @@
         );
         X.restore();
       }
-      function drawIcon(kind, x, y, size, color, phase = 0) {
+      function drawIconLegacy(kind, x, y, size, color, phase = 0) {
         X.save();
         X.translate(x, y);
         X.scale(size / 48, size / 48);
@@ -9842,6 +12279,10 @@
           drawMenu();
           return;
         }
+        if (st === "skills") {
+          drawSkills();
+          return;
+        }
         if (st === "almanac") {
           drawEnemyAlmanac();
           return;
@@ -10038,6 +12479,7 @@
           X.fillRect(o.x - z, o.y - z, z * 2, z * 2);
         }
         for (const chest of chests) drawWorldChest(chest);
+        drawPerkFX();
         for (const r of rings) {
           X.strokeStyle = r.c;
           X.globalAlpha = Math.pow(Math.max(0, Math.min(1, r.l * 2.6)), 1.4) * 0.9;
@@ -10280,11 +12722,18 @@
           if (st == "dead" || (st === "online" && net.gameState === "dead")) drawDeath();
         }
       }
+      let buildScrollSt = "";
       function draw() {
+        if (buildScrollSt !== st) {
+          buildScrollSt = st;
+          buildScroll = 0;
+        }
         uiButtons.length = 0;
         hoverTooltip = null;
         drawScene();
+        drawLegendaryOverlay();
         drawFocusRing();
+        drawUiSparks();
         drawCustomTooltip();
       }
       let last = performance.now();
@@ -10435,8 +12884,12 @@
       function pick(i) {
         if (st !== "pick" || pickT < 0.4) return false;
         if (serverCoop?.enabled) return chooseForPilot(0, i);
-        const chosen = applyUpgradeChoice(i);
-        if (chosen) st = "play";
+        const pickedU = offer[i],
+          chosen = applyUpgradeChoice(i);
+        if (chosen) {
+          st = "play";
+          if (pickedU) pickRarityFx(pickedU, i);
+        }
         return chosen;
       }
       function touchStickVector(point, origin) {
@@ -10628,18 +13081,21 @@
       });
       function uiClick() {
         if (st == "menu") {
-          if (inRect(mouse.x, mouse.y, 110, 350, 205, 48)) start(false);
-          else if (inRect(mouse.x, mouse.y, 330, 350, 205, 48)) st = "daily";
-          else if (inRect(mouse.x, mouse.y, 110, 410, 205, 48)) openSettings("menu");
-          else if (inRect(mouse.x, mouse.y, 330, 410, 205, 48)) {
+          if (inRect(mouse.x, mouse.y, 110, 326, 205, 46)) start(false);
+          else if (inRect(mouse.x, mouse.y, 330, 326, 205, 46)) st = "daily";
+          else if (inRect(mouse.x, mouse.y, 110, 382, 205, 46)) openSkills("menu");
+          else if (inRect(mouse.x, mouse.y, 330, 382, 205, 46)) {
             net.mode = "menu";
             net.error = "";
             st = "onlineLobby";
-          } else if (inRect(mouse.x, mouse.y, 220, 462, 205, 44)) {
+          } else if (inRect(mouse.x, mouse.y, 110, 438, 205, 46)) openSettings("menu");
+          else if (inRect(mouse.x, mouse.y, 330, 438, 205, 46)) {
             almanacPage = 0;
             almanacSelected = "grunt";
             st = "almanac";
           }
+        } else if (st === "skills") {
+          clickSkills();
         } else if (st === "onlineLobby") {
           if (net.sessionActive && (net.p2pRoom || (net.ws && net.ws.readyState === 1))) {
             if (inRect(mouse.x, mouse.y, 356, 298, 248, 46)) {
@@ -10691,12 +13147,12 @@
             else if (inRect(mouse.x, mouse.y, 356, 358, 248, 46)) openSettings("online");
             else if (inRect(mouse.x, mouse.y, 356, 416, 248, 46)) leaveOnline();
           } else if (net.gameState === "dead") {
-            if (inRect(mouse.x, mouse.y, 240, 490, 210, 46)) sendOnlineAction("restart");
-            else if (inRect(mouse.x, mouse.y, 510, 490, 210, 46)) leaveOnline();
+            if (inRect(mouse.x, mouse.y, 240, 506, 210, 44)) sendOnlineAction("restart");
+            else if (inRect(mouse.x, mouse.y, 510, 506, 210, 44)) leaveOnline();
           }
         } else if (st == "daily") {
-          if (inRect(mouse.x, mouse.y, 356, 401, 248, 46)) start(true);
-          else if (inRect(mouse.x, mouse.y, 356, 454, 248, 30)) st = "menu";
+          if (inRect(mouse.x, mouse.y, 356, 410, 248, 46)) start(true);
+          else if (inRect(mouse.x, mouse.y, 356, 464, 248, 34)) st = "menu";
         } else if (st === "almanac") handleAlmanacClick(mouse.x, mouse.y);
         else if (st == "settings") {
           if (inRect(mouse.x, mouse.y, 185, 126, 284, 34)) {
@@ -10705,7 +13161,7 @@
           } else if (inRect(mouse.x, mouse.y, 491, 126, 284, 34)) {
             settingsPage = "advanced";
             resetArmed = false;
-          } else if (inRect(mouse.x, mouse.y, 350, 505, 260, 38)) {
+          } else if (inRect(mouse.x, mouse.y, 350, 508, 260, 38)) {
             st = settingsFrom;
             settingsPage = "basic";
             resetArmed = false;
@@ -10723,6 +13179,7 @@
         } else if ((st == "play" || st === "online") && journalOpen) {
           if (inRect(mouse.x, mouse.y, W - 360, 74, 340, 34)) journalOpen = false;
         } else if (st == "pick") {
+          if (canReroll() && inRect(mouse.x, mouse.y, W / 2 - 190, 478, 380, 36)) return rerollOffer();
           for (let i = 0; i < 3; i++) {
             const r = upgradeBounds(i);
             if (inRect(mouse.x, mouse.y, r.x, r.y, r.w, r.h)) pick(i);
@@ -10735,8 +13192,9 @@
             st = "menu";
           }
         } else if (st == "dead") {
-          if (inRect(mouse.x, mouse.y, 240, 490, 210, 46)) start(daily);
-          else if (inRect(mouse.x, mouse.y, 510, 490, 210, 46)) st = "menu";
+          if (inRect(mouse.x, mouse.y, 150, 506, 200, 44)) start(daily);
+          else if (inRect(mouse.x, mouse.y, 380, 506, 200, 44)) openSkills("dead");
+          else if (inRect(mouse.x, mouse.y, 610, 506, 200, 44)) st = "menu";
         }
       }
       C.addEventListener("pointermove", (e) => {
@@ -10824,9 +13282,15 @@
             st = "almanac";
           }
           if (k == "o") openSettings("menu");
+          if (k === "h") openSkills("menu");
           if (k === "l") {
             net.mode = "menu";
             st = "onlineLobby";
+          }
+        } else if (st === "skills") {
+          if (k === "escape" || k === "backspace") {
+            st = skillFrom;
+            respecArmed = false;
           }
         } else if (st === "onlineLobby") {
           if (k === "escape") {
@@ -10858,6 +13322,7 @@
           if (k == "escape") st = "menu";
         } else if (st == "dead") {
           if (k == "enter") start(daily);
+          if (k === "h") openSkills("dead");
           if (k == "escape") st = "menu";
         } else if (st == "settings") {
           if (k == "escape") {
@@ -10870,6 +13335,7 @@
           } else if (settingsPage == "basic" && "12345".includes(k)) togglePref(+k - 1);
           else if (settingsPage == "advanced" && "1234567".includes(k)) toggleAdvanced(+k - 1);
         } else if (st == "pick" && "123".includes(k)) pick(+k - 1);
+        else if (st == "pick" && k == "r") rerollOffer();
         else if (st === "online" && (k === "p" || k === "escape")) {
           st = "onlineLobby";
           net.status = "En partida";
